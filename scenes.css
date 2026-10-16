@@ -1,0 +1,81 @@
+/* Backgrounds drawn in pure CSS: no image assets, works offline. s1 = ground, s2 = props, s3 = accent. */
+.scene, .scene span { position: fixed; inset: 0; pointer-events: none; }
+.scene span { display: block; }
+
+/* Indoor: brick courtyard with a wooden trellis and cobblestones, after the reference screenshots */
+[data-scene="indoor"] .scene {
+  background:
+    repeating-linear-gradient(90deg, #2c1b10 0 7px, transparent 7px 110px),
+    repeating-linear-gradient(0deg, #2c1b10 0 7px, transparent 7px 130px),
+    repeating-linear-gradient(0deg, rgba(60, 42, 26, 0.85) 0 2px, transparent 2px 20px),
+    repeating-linear-gradient(90deg, rgba(60, 42, 26, 0.55) 0 2px, transparent 2px 44px),
+    linear-gradient(#a8865d, #8a6a46);
+}
+[data-scene="indoor"] .s1 {
+  top: 58%;
+  background:
+    radial-gradient(ellipse 46% 40% at 50% 50%, #8f8b80 60%, transparent 64%) 0 0 / 30px 22px,
+    radial-gradient(ellipse 46% 40% at 50% 50%, #7e7a70 60%, transparent 64%) 15px 11px / 30px 22px,
+    linear-gradient(#55524b, #45423c);
+  box-shadow: inset 0 18px 30px rgba(0, 0, 0, 0.45);
+}
+[data-scene="indoor"] .s2 {
+  top: 40%; bottom: 40%;
+  background:
+    radial-gradient(circle at 8% 70%, #3d6b2c 0 9%, transparent 10%),
+    radial-gradient(circle at 13% 55%, #4c8236 0 8%, transparent 9%),
+    radial-gradient(circle at 92% 62%, #3d6b2c 0 9%, transparent 10%),
+    radial-gradient(circle at 87% 50%, #4c8236 0 7%, transparent 8%);
+}
+
+/* Park: sky, tree line, mowed lawn */
+[data-scene="park"] .scene { background: linear-gradient(#8ccbf0, #d9f0fb 55%); }
+[data-scene="park"] .s3 { background: radial-gradient(circle at 82% 12%, #fff7c2 0 5%, rgba(255, 240, 160, 0.4) 9%, transparent 20%); }
+[data-scene="park"] .s2 {
+  top: 30%; bottom: 50%;
+  background:
+    radial-gradient(ellipse 9% 60% at 6% 80%, #2f6a2a 98%, transparent),
+    radial-gradient(ellipse 12% 75% at 20% 85%, #3b7d31 98%, transparent),
+    radial-gradient(ellipse 10% 65% at 36% 90%, #2f6a2a 98%, transparent),
+    radial-gradient(ellipse 13% 80% at 62% 88%, #3b7d31 98%, transparent),
+    radial-gradient(ellipse 10% 60% at 80% 85%, #2f6a2a 98%, transparent),
+    radial-gradient(ellipse 11% 70% at 95% 82%, #3b7d31 98%, transparent);
+}
+[data-scene="park"] .s1 {
+  top: 50%;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0 60px, transparent 60px 120px), linear-gradient(#6fae4f, #3f7a30);
+}
+
+/* Office: painted wall, bright window with blinds, carpet */
+[data-scene="office"] .scene { background: linear-gradient(#d9d3c8, #c8c1b4); }
+[data-scene="office"] .s2 {
+  top: 6%; bottom: 52%; left: 58%; right: 6%; border: 10px solid #f2efe9; border-radius: 4px;
+  background: repeating-linear-gradient(0deg, #eef3f6 0 9px, #b9c6cf 9px 11px), linear-gradient(#a9d6f5, #e8f4fb);
+  background-blend-mode: multiply; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+[data-scene="office"] .s3 { top: 12%; bottom: 60%; left: 8%; right: 66%; background: repeating-linear-gradient(90deg, #6d4c33 0 14px, #8a6447 14px 22px, #3f5d73 22px 34px, #b6532f 34px 42px); border-bottom: 8px solid #4a3324; }
+[data-scene="office"] .s1 {
+  top: 52%; border-top: 10px solid #efe9df;
+  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.03) 0 3px, transparent 3px 6px), linear-gradient(#6a6f78, #4c5058);
+}
+
+/* Swimming pool: sky, tiled deck, lane ropes, shimmering water */
+[data-scene="pool"] .scene { background: linear-gradient(#7ec8f2, #c7ebfb 18%); }
+[data-scene="pool"] .s3 {
+  top: 18%; bottom: 66%;
+  background: repeating-linear-gradient(90deg, rgba(120, 140, 150, 0.35) 0 1px, transparent 1px 28px), repeating-linear-gradient(0deg, rgba(120, 140, 150, 0.35) 0 1px, transparent 1px 28px), #f1efe9;
+}
+[data-scene="pool"] .s1 {
+  top: 34%;
+  background:
+    radial-gradient(ellipse 30% 12% at 30% 30%, rgba(255, 255, 255, 0.22), transparent 70%) 0 0 / 160px 90px,
+    radial-gradient(ellipse 26% 10% at 70% 70%, rgba(255, 255, 255, 0.16), transparent 70%) 40px 30px / 140px 80px,
+    repeating-linear-gradient(90deg, rgba(10, 60, 110, 0.18) 0 2px, transparent 2px 46px),
+    linear-gradient(#3fb4e0, #157ab6);
+  animation: shimmer 9s linear infinite;
+}
+[data-scene="pool"] .s2 {
+  top: 34%;
+  background: linear-gradient(transparent 24.5%, #d6332a 24.5% 25.5%, transparent 25.5% 49.5%, #f5f5f5 49.5% 50.5%, transparent 50.5% 74.5%, #d6332a 74.5% 75.5%, transparent 75.5%);
+}
+@keyframes shimmer { to { background-position: 160px 90px, -100px 110px, 0 0, 0 0; } }

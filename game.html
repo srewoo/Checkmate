@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Checkmate</title>
+  <link rel="stylesheet" href="game.css">
+  <link rel="stylesheet" href="scenes.css">
+</head>
+<body data-scene="indoor">
+  <div class="scene" aria-hidden="true"><span class="s1"></span><span class="s2"></span><span class="s3"></span></div>
+  <div id="board3d" class="board3d" aria-label="3D chess board. Drag to look around, scroll to zoom, double-click to reset the view." hidden></div>
+
+  <main class="app">
+    <header class="bar glass">
+      <h1>Checkmate</h1>
+      <p id="status" aria-live="polite">White to move</p>
+      <button id="settingsBtn" class="icon" aria-label="Settings">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+    </header>
+
+    <section class="table">
+      <p id="hint" class="hint3d">Drag to look around · scroll to zoom · double-click to reset</p>
+      <div class="stage"><div id="board" class="board" role="grid" aria-label="Chess board"></div></div>
+    </section>
+
+    <section class="panel glass">
+      <div class="voice">
+        <button id="mic" class="mic" aria-pressed="false">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+          <span>Speak</span>
+        </button>
+        <p id="heard">Say “knight to f3”, “e2 to e4”, “castle kingside”, or click a piece.</p>
+      </div>
+      <div class="actions">
+        <button id="undo">Undo</button>
+        <button id="flip">Flip board</button>
+        <button id="newGame">New game</button>
+      </div>
+      <ol id="moves" class="moves" aria-label="Move list"></ol>
+    </section>
+  </main>
+
+  <dialog id="settings">
+    <form id="settingsForm" method="dialog">
+      <h2>Game settings</h2>
+
+      <fieldset class="seg"><legend>Mode</legend>
+        <label><input type="radio" name="mode" value="local" checked><span>2 players · this device</span></label>
+        <label><input type="radio" name="mode" value="ai"><span>vs Computer</span></label>
+        <label><input type="radio" name="mode" value="online"><span>Online · 2 extension users</span></label>
+      </fieldset>
+
+      <div id="aiOpts" class="group">
+        <fieldset class="seg"><legend>Play as</legend>
+          <label><input type="radio" name="color" value="w" checked><span>White</span></label>
+          <label><input type="radio" name="color" value="b"><span>Black</span></label>
+        </fieldset>
+        <fieldset class="seg"><legend>Difficulty</legend>
+          <label><input type="radio" name="level" value="easy"><span>Easy</span></label>
+          <label><input type="radio" name="level" value="medium" checked><span>Medium</span></label>
+          <label><input type="radio" name="level" value="hard"><span>Hard</span></label>
+        </fieldset>
+        <fieldset class="seg"><legend>Engine</legend>
+          <label><input type="radio" name="engine" value="classic" checked><span>Classic</span></label>
+          <label><input type="radio" name="engine" value="chrome"><span>Chrome built-in AI</span></label>
+        </fieldset>
+        <p id="aiStatus" class="hint"></p>
+      </div>
+
+      <div id="onlineOpts" class="group">
+        <p class="hint">No server needed. One player hosts (white), sends the invite code over any chat, and pastes back the friend's reply code.</p>
+        <div class="row"><button type="button" id="hostBtn">Host a game</button><button type="button" id="joinBtn">Join a game</button></div>
+        <div id="hostBox" hidden>
+          <label>1 · Send this invite code<textarea id="invite" readonly rows="3"></textarea></label>
+          <button type="button" data-copy="invite">Copy invite</button>
+          <label>2 · Paste your friend's reply code<textarea id="replyIn" rows="3"></textarea></label>
+          <button type="button" id="connectBtn">Connect</button>
+        </div>
+        <div id="joinBox" hidden>
+          <label>1 · Paste the invite code<textarea id="inviteIn" rows="3"></textarea></label>
+          <button type="button" id="makeReplyBtn">Create reply code</button>
+          <label>2 · Send this reply code back<textarea id="reply" readonly rows="3"></textarea></label>
+          <button type="button" data-copy="reply">Copy reply</button>
+        </div>
+        <p id="netStatus" class="hint" aria-live="polite"></p>
+      </div>
+
+      <fieldset class="seg scenes"><legend>Background</legend>
+        <label><input type="radio" name="scene" value="indoor" checked><span>Indoor</span></label>
+        <label><input type="radio" name="scene" value="park"><span>Park</span></label>
+        <label><input type="radio" name="scene" value="office"><span>Office</span></label>
+        <label><input type="radio" name="scene" value="pool"><span>Swimming pool</span></label>
+      </fieldset>
+
+      <fieldset class="checks"><legend>Options</legend>
+        <label><input type="checkbox" name="tilt" checked> 3D board (drag to orbit)</label>
+        <label><input type="checkbox" name="speak" checked> Read moves aloud</label>
+        <label><input type="checkbox" name="ambient" checked> Ambient sound</label>
+      </fieldset>
+
+      <footer class="row end">
+        <button value="close" formnovalidate class="ghost">Close</button>
+        <button value="start" class="primary">Start new game</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>

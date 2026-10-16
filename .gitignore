@@ -1,0 +1,16 @@
+# build output (npm run build / npm run zip)
+dist/
+*.zip
+
+# dependencies
+node_modules/
+
+# browser-automation screenshots and logs
+.playwright-mcp/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

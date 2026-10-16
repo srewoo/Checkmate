@@ -1,0 +1,9 @@
+{
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "build": "rm -rf dist && mkdir dist && cp -R manifest.json *.html *.css *.js icons vendor dist/",
+    "zip": "npm test && npm run build && V=$(node -p \"require('./manifest.json').version\") && rm -f checkmate-$V.zip && cd dist && zip -qrX ../checkmate-$V.zip . && echo \"Created checkmate-$V.zip\""
+  }
+}
