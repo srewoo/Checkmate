@@ -2,6 +2,9 @@
 dist/
 *.zip
 
+# Chrome Web Store listing assets (screenshots, promo tiles, listing text)
+store/
+
 # dependencies
 node_modules/
 
@@ -14,3 +17,4 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+brag-output

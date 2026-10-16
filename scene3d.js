@@ -166,7 +166,7 @@ const ROOMS = {
     g.add(floor(T.tex(1024, T.grass, 16)));
     for (let i = 0; i < 22; i++) {
       const a = rnd(0, Math.PI * 2);
-      const d = rnd(22, 48);
+      const d = rnd(32, 56); // beyond orbit range, so the camera never ends up inside a tree
       g.add(tree(Math.cos(a) * d, Math.sin(a) * d));
     }
     return { background: T.sky('#5aa9e0', '#d9eefa'), fog: ['#d4ebf7', 45, 110], hemi: [0xe8f4ff, 0x3d5a2a, 1.15], sun: [0xfff4d6, 2.9] };

@@ -83,7 +83,7 @@ export function createBoard3D(container, onSquare, onOrbit) {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 200);
   const controls = new OrbitControls(camera, renderer.domElement);
-  Object.assign(controls, { enablePan: false, enableDamping: true, minDistance: 7, maxDistance: 48, maxPolarAngle: 1.38, minPolarAngle: 0.05 });
+  Object.assign(controls, { enablePan: false, enableDamping: true, minDistance: 7, maxDistance: 30, maxPolarAngle: 1.38, minPolarAngle: 0.05 });
   controls.addEventListener('start', () => onOrbit?.());
 
   const hemi = new THREE.HemisphereLight(0xfff1dc, 0x3a2614, 1.1);
