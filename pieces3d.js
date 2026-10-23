@@ -75,20 +75,56 @@ export function woodTexture(light, dark, { size = 256, lines = 40, repeat = 1, d
   return t;
 }
 
+// Lacquered boxwood and ebonised wood: glossy clearcoat over a satin base, lit by the PMREM environment.
 let mats;
-function materials() {
+export function pieceMaterials() {
   mats ??= {
     w: new THREE.MeshPhysicalMaterial({
-      color: 0xf1dcb4, map: woodTexture('#f3e2c2', '#b88a55', { lines: 24 }), roughness: 0.42, clearcoat: 0.55, clearcoatRoughness: 0.3,
+      color: 0xf4e2bf, map: woodTexture('#f3e2c2', '#b88a55', { lines: 24 }), roughness: 0.38, clearcoat: 1, clearcoatRoughness: 0.08,
     }),
     b: new THREE.MeshPhysicalMaterial({
-      color: 0x6a5446, map: woodTexture('#5a463a', '#1a110c', { lines: 24 }), roughness: 0.34, clearcoat: 0.7, clearcoatRoughness: 0.2,
+      color: 0x5c4638, map: woodTexture('#5a463a', '#1a110c', { lines: 24 }), roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.06,
     }),
   };
   return mats;
 }
 
-function extras(type) {
+// Shared "in check" materials; board3d pulses their emissive intensity.
+let glows;
+export function glowMaterials() {
+  glows ??= Object.fromEntries(Object.entries(pieceMaterials()).map(([c, m]) => [c, Object.assign(m.clone(), { emissive: new THREE.Color(0xff2a14), emissiveIntensity: 0.5 })]));
+  return glows;
+}
+
+/** Swap a piece between its normal and glowing material. */
+export function setGlow(piece, on) {
+  const m = on ? glowMaterials()[piece.userData.key[0]] : pieceMaterials()[piece.userData.key[0]];
+  piece.userData.fx.traverse((o) => { if (o.isMesh) o.material = m; });
+  return piece;
+}
+
+let blobMat;
+const blobGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+function contactShadow() {
+  blobMat ??= new THREE.MeshBasicMaterial({ map: blobTexture(), transparent: true, depthWrite: false, opacity: 0.75 });
+  const m = new THREE.Mesh(blobGeo, blobMat);
+  m.renderOrder = 1;
+  return m;
+}
+
+function blobTexture() {
+  const c = Object.assign(document.createElement('canvas'), { width: 64, height: 64 });
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(32, 32, 4, 32, 32, 32);
+  grd.addColorStop(0, 'rgba(0,0,0,0.85)');
+  grd.addColorStop(0.45, 'rgba(0,0,0,0.45)');
+  grd.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+}
+
+function extras(type, color) {
   const parts = [];
   if (type === 'r') {
     for (let i = 0; i < 4; i++) parts.push({ g: geo('merlon', () => new THREE.BoxGeometry(0.13, 0.1, 0.1)), at: [Math.cos(i * Math.PI / 2) * 0.24, 0.89, Math.sin(i * Math.PI / 2) * 0.24], ry: -i * Math.PI / 2 });
@@ -104,27 +140,31 @@ function extras(type) {
     parts.push({
       g: geo('knightHead', knightHead),
       at: [0, 0, 0],
-      ry: Math.PI / 4, // three-quarter view so the profile reads from either seat
+      ry: Math.PI / 4 + (color === 'b' ? Math.PI : 0), // three-quarter view, facing the opponent
     });
   }
   return parts;
 }
 
-/** A piece as a Group whose origin sits at the centre of its base. */
+/**
+ * A piece as a Group whose origin sits at the centre of its base. The group carries travel;
+ * `userData.fx` (child) carries flourishes (lean, squash, hover lift, topple); `userData.shadow` is the contact blob.
+ */
 export function makePiece(type, color) {
-  const mat = materials()[color];
+  const mat = pieceMaterials()[color];
   const group = new THREE.Group();
-  const body = new THREE.Mesh(geo(type, () => new THREE.LatheGeometry(PROFILES[type], 40)), mat);
-  group.add(body);
-  for (const { g, at, ry = 0 } of extras(type)) {
+  const fx = new THREE.Group();
+  fx.add(new THREE.Mesh(geo(type, () => new THREE.LatheGeometry(PROFILES[type], 40)), mat));
+  for (const { g, at, ry = 0 } of extras(type, color)) {
     const m = new THREE.Mesh(g, mat);
     m.position.set(...at);
     m.rotation.y = ry;
-    group.add(m);
+    fx.add(m);
   }
-  group.traverse((o) => { o.castShadow = true; o.receiveShadow = true; });
-  if (type === 'n') group.rotation.y = color === 'w' ? 0 : Math.PI; // knights face the opponent
+  fx.traverse((o) => { o.castShadow = true; o.receiveShadow = true; });
+  const shadow = contactShadow();
+  group.add(fx, shadow);
   group.scale.setScalar(0.95);
-  group.userData.key = color + type;
+  group.userData = { key: color + type, fx, shadow };
   return group;
 }

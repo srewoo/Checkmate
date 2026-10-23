@@ -14,6 +14,7 @@
     <header class="bar glass">
       <h1>Checkmate</h1>
       <p id="status" aria-live="polite">White to move</p>
+      <p id="clocks" class="clocks" role="timer" aria-label="Chess clock" hidden><span data-c="w"></span><span data-c="b"></span></p>
       <button id="settingsBtn" class="icon" aria-label="Settings">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
       </button>
@@ -36,7 +37,10 @@
         <button id="undo">Undo</button>
         <button id="flip">Flip board</button>
         <button id="newGame">New game</button>
+        <button id="draw">Offer draw</button>
+        <button id="resign">Resign</button>
       </div>
+      <p id="material" class="material" aria-live="polite"></p>
       <ol id="moves" class="moves" aria-label="Move list"></ol>
     </section>
   </main>
@@ -51,6 +55,14 @@
         <label><input type="radio" name="mode" value="online"><span>Online · 2 extension users</span></label>
       </fieldset>
 
+      <fieldset id="clockOpts" class="seg"><legend>Clock</legend>
+        <label><input type="radio" name="clock" value="off"><span>Off</span></label>
+        <label><input type="radio" name="clock" value="3+2"><span>3 + 2</span></label>
+        <label><input type="radio" name="clock" value="5+0"><span>5 min</span></label>
+        <label><input type="radio" name="clock" value="10+0" checked><span>10 min</span></label>
+        <label><input type="radio" name="clock" value="15+10"><span>15 + 10</span></label>
+      </fieldset>
+
       <div id="aiOpts" class="group">
         <fieldset class="seg"><legend>Play as</legend>
           <label><input type="radio" name="color" value="w" checked><span>White</span></label>
@@ -60,9 +72,10 @@
           <label><input type="radio" name="level" value="easy"><span>Easy</span></label>
           <label><input type="radio" name="level" value="medium" checked><span>Medium</span></label>
           <label><input type="radio" name="level" value="hard"><span>Hard</span></label>
+          <label><input type="radio" name="level" value="master"><span>Master</span></label>
         </fieldset>
         <fieldset class="seg"><legend>Engine</legend>
-          <label><input type="radio" name="engine" value="classic" checked><span>Classic</span></label>
+          <label><input type="radio" name="engine" value="stockfish" checked><span>Stockfish</span></label>
           <label><input type="radio" name="engine" value="chrome"><span>Chrome built-in AI</span></label>
         </fieldset>
         <p id="aiStatus" class="hint"></p>
@@ -93,15 +106,61 @@
         <label><input type="radio" name="scene" value="pool"><span>Swimming pool</span></label>
       </fieldset>
 
+      <fieldset class="seg themes"><legend>Pieces &amp; board</legend>
+        <label><input type="radio" name="theme" value="wood" checked><span>Wood</span></label>
+        <label><input type="radio" name="theme" value="marble"><span>Marble</span></label>
+        <label><input type="radio" name="theme" value="glass"><span>Glass</span></label>
+        <label><input type="radio" name="theme" value="metal"><span>Metal</span></label>
+      </fieldset>
+
       <fieldset class="checks"><legend>Options</legend>
         <label><input type="checkbox" name="tilt" checked> 3D board (drag to orbit)</label>
         <label><input type="checkbox" name="speak" checked> Read moves aloud</label>
         <label><input type="checkbox" name="ambient" checked> Ambient sound</label>
+        <label><input type="checkbox" name="sfx" checked> Move sounds</label>
       </fieldset>
+
+      <details class="licenses">
+        <summary>Open-source licenses</summary>
+        <ul>
+          <li>Checkmate: GPL-3.0-or-later (<code>LICENSE</code> in the extension folder)</li>
+          <li>Stockfish 17.1 via Stockfish.js v17.1.0: GPL-3.0. Source:
+            <a href="https://github.com/nmrugg/stockfish.js/tree/v17.1.0" target="_blank" rel="noopener">stockfish.js v17.1.0</a>,
+            <a href="https://github.com/official-stockfish/Stockfish/tree/sf_17.1" target="_blank" rel="noopener">Stockfish sf_17.1</a></li>
+          <li><a href="https://github.com/jhlywa/chess.js" target="_blank" rel="noopener">chess.js</a>: BSD-2-Clause</li>
+          <li><a href="https://github.com/mrdoob/three.js/tree/r170" target="_blank" rel="noopener">three.js r170</a> incl. OrbitControls, RoomEnvironment: MIT</li>
+        </ul>
+        <p class="hint">Full license texts ship in <code>LICENSE</code> and <code>vendor/</code>.</p>
+      </details>
 
       <footer class="row end">
         <button value="close" formnovalidate class="ghost">Close</button>
         <button value="start" class="primary">Start new game</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog id="promo" class="promo" aria-labelledby="promoTitle">
+    <form method="dialog">
+      <h2 id="promoTitle">Promote pawn to</h2>
+      <div class="row">
+        <button value="q"><span class="glyph" aria-hidden="true"></span>Queen</button>
+        <button value="r"><span class="glyph" aria-hidden="true"></span>Rook</button>
+        <button value="b"><span class="glyph" aria-hidden="true"></span>Bishop</button>
+        <button value="n"><span class="glyph" aria-hidden="true"></span>Knight</button>
+      </div>
+      <footer class="row end"><button value="" formnovalidate class="ghost">Cancel</button></footer>
+    </form>
+  </dialog>
+
+  <dialog id="result" class="result" aria-labelledby="resultTitle">
+    <form method="dialog">
+      <h2 id="resultTitle"></h2>
+      <p id="resultReason"></p>
+      <footer class="row end">
+        <button type="button" id="copyPgn">Copy PGN</button>
+        <button value="close" class="ghost">Close</button>
+        <button value="rematch" class="primary">Rematch</button>
       </footer>
     </form>
   </dialog>

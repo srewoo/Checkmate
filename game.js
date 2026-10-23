@@ -1,15 +1,22 @@
 import { Chess } from './vendor/chess.js';
 import { renderBoard } from './board.js';
 import { createBoard3D } from './board3d.js';
-import { parseSpoken, matchMoves, sayMove } from './parse.js';
-import { chromeAIStatus, warmChromeAI, chromeAIMove, chromeAIInterpret } from './ai.js';
-import { createVoice, speak } from './voice.js';
+import { sayMove } from './parse.js';
+import { search, engineMove, evaluate } from './engines.js';
+import { createClock, parseControl, renderClockHud } from './clock.js';
+import { resultOf, materialBalance, moveSound } from './result.js';
+import { askPromotion, showResult, confirmed } from './dialogs.js';
+import { setupSettings } from './settings-ui.js';
+import { playSfx } from './sfx.js';
+import { chromeAIStatus, chromeAIMove } from './ai.js';
+import { speak } from './voice.js';
+import { setupVoice } from './voice-ui.js';
 import { setupOnline } from './online.js';
 import { setAmbient } from './ambient.js';
 
 const $ = (id) => document.getElementById(id);
 const KEY = 'checkmate.settings';
-const DEFAULTS = { mode: 'local', color: 'w', level: 'medium', engine: 'classic', scene: 'indoor', tilt: true, speak: true, ambient: true };
+const DEFAULTS = { mode: 'local', color: 'w', level: 'medium', engine: 'stockfish', clock: '10+0', scene: 'indoor', theme: 'wood', tilt: true, speak: true, ambient: true, sfx: true };
 const settings = { ...DEFAULTS, ...readSaved() };
 
 const chess = new Chess();
@@ -17,6 +24,13 @@ const view = { flipped: false, selected: undefined, targets: new Map(), last: un
 let myColor = null; // null = this device plays both sides
 let thinking = false;
 let gameId = 0;
+let clock = null; // null = no time control
+let ended = null; // resignation or agreed draw: {winner, reason}
+let drawOffer = null; // online: 'me' | 'them'
+const lowWarned = new Set();
+const result = () => resultOf(chess, clock?.state().flagged, ended);
+const isOver = () => Boolean(result());
+const AGREED = { winner: null, reason: 'Agreed by both players' };
 
 function readSaved() {
   try { return JSON.parse(localStorage.getItem(KEY)) ?? {}; } catch { return {}; }
@@ -26,18 +40,8 @@ function save() {
 }
 const heard = (text) => { $('heard').textContent = text; };
 const sideName = (c) => (c === 'w' ? 'White' : 'Black');
-
-// ---- engine worker ----
-const worker = new Worker('engine-worker.js', { type: 'module' });
-const search = (msg) => new Promise((resolve) => {
-  const h = (e) => {
-    if (e.data.fen !== msg.fen) return;
-    worker.removeEventListener('message', h);
-    resolve(e.data);
-  };
-  worker.addEventListener('message', h);
-  worker.postMessage(msg);
-});
+const other = (c) => (c === 'w' ? 'b' : 'w');
+const sfx = (kind) => { if (settings.sfx) playSfx(kind); };
 
 // ---- online ----
 const online = setupOnline({
@@ -51,14 +55,16 @@ const online = setupOnline({
   onMessage(msg) {
     if (msg.t === 'move' && typeof msg.san === 'string' && chess.turn() !== online.color) commit(msg.san, true);
     else if (msg.t === 'new') newGame(false);
+    else if (msg.t === 'resign') endGame({ winner: online.color, reason: `${sideName(other(online.color))} resigned` });
+    else if (msg.t === 'draw') { drawOffer = 'them'; heard('Your opponent offers a draw.'); update(); }
+    else if (msg.t === 'draw-accept' && drawOffer === 'me') endGame(AGREED);
   },
 });
 
 // ---- rendering ----
 function statusText() {
-  if (chess.isCheckmate()) return `Checkmate · ${sideName(chess.turn() === 'w' ? 'b' : 'w')} wins`;
-  if (chess.isStalemate()) return 'Stalemate · draw';
-  if (chess.isDraw()) return 'Draw';
+  const r = result();
+  if (r) return r.winner ? `${r.reason} · ${sideName(r.winner)} wins` : `${r.reason} · draw`;
   if (settings.mode === 'online' && !online.open) return 'Waiting for opponent… (open settings to connect)';
   const who = myColor === null ? sideName(chess.turn()) : chess.turn() === myColor ? 'Your turn' : thinking ? 'Computer is thinking…' : 'Opponent to move';
   return `${who}${myColor === null ? ' to move' : ''}${chess.inCheck() ? ' · check!' : ''}`;
@@ -72,7 +78,38 @@ function update() {
   list.replaceChildren(...pairs(chess.history()).map((p) => Object.assign(document.createElement('li'), { textContent: p })));
   list.scrollTop = list.scrollHeight;
   $('undo').disabled = settings.mode === 'online' || thinking || !chess.history().length;
+  const bal = materialBalance(chess);
+  $('material').textContent = bal ? `${sideName(bal > 0 ? 'w' : 'b')} +${Math.abs(bal)}` : 'Material even';
+  const idle = isOver() || thinking || (settings.mode === 'online' && !online.open);
+  $('resign').disabled = idle;
+  $('resign').textContent = $('resign').dataset.armed ? 'Confirm resign' : 'Resign';
+  $('draw').disabled = idle || drawOffer === 'me';
+  $('draw').textContent = drawOffer === 'them' ? 'Accept draw' : drawOffer === 'me' ? 'Draw offered' : $('draw').dataset.armed ? 'Confirm draw' : 'Offer draw';
+  renderClock();
+  announce();
 }
+
+let announced = false;
+function announce() {
+  const r = result();
+  if (!r) { announced = false; return; }
+  if (announced) return;
+  announced = true;
+  clock?.stop();
+  sfx('end');
+  const title = !r.winner ? 'Draw' : myColor === null ? `${sideName(r.winner)} wins` : r.winner === myColor ? 'You win!' : 'You lost';
+  showResult(title, r.reason, chess.pgn(), () => newGame());
+}
+
+let flagSeen = null;
+function renderClock() {
+  const s = clock?.state() ?? null;
+  renderClockHud($('clocks'), s);
+  board3d?.setClock(s);
+  if (s && s.flagged !== flagSeen) { flagSeen = s.flagged; if (s.flagged) update(); }
+  if (s?.running && s[s.turn] < 10000 && !lowWarned.has(s.turn)) { lowWarned.add(s.turn); sfx('low'); }
+}
+setInterval(renderClock, 200);
 const pairs = (h) => Array.from({ length: Math.ceil(h.length / 2) }, (_, i) => `${h[2 * i]} ${h[2 * i + 1] ?? ''}`);
 
 let audioUnlocked = false; // autoplay policy: sound may only start after a user gesture
@@ -86,6 +123,8 @@ function applyLook() {
     }
   }
   board3d?.setScene(settings.scene);
+  board3d?.setTheme(settings.theme);
+  document.body.dataset.theme = settings.theme;
   document.body.classList.toggle('three', Boolean(board3d && settings.tilt));
   $('board3d').hidden = !(board3d && settings.tilt);
   if (audioUnlocked) setAmbient(settings.scene, settings.ambient);
@@ -94,7 +133,7 @@ document.addEventListener('pointerdown', () => { audioUnlocked = true; applyLook
 
 // ---- moves ----
 const canHumanMove = () =>
-  !chess.isGameOver() && !thinking && (myColor === null || chess.turn() === myColor) &&
+  !isOver() && !thinking && (myColor === null || chess.turn() === myColor) &&
   (settings.mode !== 'online' || online.open);
 
 function clearSel() { view.selected = undefined; view.targets = new Map(); }
@@ -103,7 +142,11 @@ function commit(input, fromPeer = false) {
   let m;
   try { m = chess.move(input); } catch { return null; }
   view.last = m;
+  drawOffer = null; // a move declines any pending offer
+  clock?.moved(m.color);
+  if (chess.isGameOver()) clock?.stop();
   clearSel();
+  if (!isOver()) sfx(moveSound(m, chess));
   update();
   if (settings.speak) speak(sayMove(m));
   if (!fromPeer && settings.mode === 'online') online.send({ t: 'move', san: m.san });
@@ -112,7 +155,7 @@ function commit(input, fromPeer = false) {
 }
 
 async function maybeAI() {
-  if (settings.mode !== 'ai' || chess.isGameOver() || chess.turn() === myColor) return;
+  if (settings.mode !== 'ai' || isOver() || chess.turn() === myColor) return;
   const gid = gameId;
   const fen = chess.fen();
   thinking = true;
@@ -125,23 +168,30 @@ async function maybeAI() {
       const { sans } = await search({ fen, level: settings.level, pool: true });
       ({ san, comment } = await chromeAIMove(fen, sans, chess.pgn()));
     } catch (err) {
-      console.warn('[checkmate] Chrome AI failed, using classic engine:', err);
-      comment = 'Chrome AI unavailable, classic engine moved instead.';
+      console.warn('[checkmate] Chrome AI failed, using Stockfish:', err);
+      comment = 'Chrome AI unavailable, Stockfish moved instead.';
     }
   }
-  const [res] = await Promise.all([san ? { san } : search({ fen, level: settings.level }), new Promise((r) => setTimeout(r, 350))]);
+  const [move] = await Promise.all([san ?? engineMove(fen, settings.level), new Promise((r) => setTimeout(r, 350))]);
   if (gid !== gameId) return;
   thinking = false;
-  commit(res.san);
+  if (isOver()) return update(); // flagged while thinking
+  commit(move);
   if (comment) heard(`Computer: ${comment}`);
 }
 
 $('board').addEventListener('click', (e) => onSquare(e.target.closest('[data-sq]')?.dataset.sq));
 
-function onSquare(sq) {
+async function onSquare(sq) {
   if (!sq || !canHumanMove()) return;
-  // ponytail: clicks auto-promote to a queen; say "a8 promote to knight" to underpromote.
-  if (view.selected && view.targets.has(sq)) { commit({ from: view.selected, to: sq, promotion: 'q' }); return; }
+  if (view.selected && view.targets.has(sq)) {
+    const from = view.selected;
+    const promo = chess.moves({ square: from, verbose: true }).some((m) => m.to === sq && m.promotion);
+    const promotion = promo ? await askPromotion(chess.turn()) : undefined;
+    if (promo && (!promotion || !canHumanMove())) return; // backed out, or the clock ran out meanwhile
+    commit({ from, to: sq, promotion });
+    return;
+  }
   const p = chess.get(sq);
   if (p && p.color === chess.turn() && sq !== view.selected) {
     view.selected = sq;
@@ -153,8 +203,8 @@ function onSquare(sq) {
 // ---- commands ----
 function undo() {
   if (settings.mode === 'online' || thinking) return;
-  chess.undo();
-  if (myColor !== null && chess.turn() !== myColor) chess.undo();
+  if (chess.undo()) clock?.undo();
+  if (myColor !== null && chess.turn() !== myColor && chess.undo()) clock?.undo();
   view.last = chess.history({ verbose: true }).at(-1);
   clearSel();
   update();
@@ -164,109 +214,74 @@ function newGame(broadcast = true) {
   gameId++;
   thinking = false;
   chess.reset();
+  ended = null;
+  drawOffer = null;
+  lowWarned.clear();
   clearSel();
   view.last = undefined;
   myColor = settings.mode === 'ai' ? settings.color : settings.mode === 'online' ? online.color : null;
   view.flipped = myColor === 'b';
+  const control = settings.mode === 'online' ? null : parseControl(settings.clock); // ponytail: no clock online, peers would need time sync
+  clock = control && createClock(control);
   if (broadcast && settings.mode === 'online') online.send({ t: 'new' });
   update();
   maybeAI();
+}
+
+function endGame(r, msg) {
+  ended = r;
+  if (msg && settings.mode === 'online') online.send(msg);
+  clearSel();
+  update();
+}
+
+function resign() {
+  const loser = myColor ?? chess.turn();
+  if (!isOver() && confirmed($('resign'), update)) endGame({ winner: other(loser), reason: `${sideName(loser)} resigned` }, { t: 'resign' });
+}
+
+async function offerDraw() {
+  if (isOver()) return;
+  if (settings.mode === 'online') {
+    if (drawOffer === 'them') return endGame(AGREED, { t: 'draw-accept' });
+    drawOffer = 'me';
+    online.send({ t: 'draw' });
+    heard('Draw offered. A move by your opponent declines it.');
+    return update();
+  }
+  if (settings.mode !== 'ai') return confirmed($('draw'), update) && endGame(AGREED);
+  const fen = chess.fen();
+  heard('The computer is considering your draw offer…');
+  const score = await evaluate(fen); // side to move's view
+  if (fen !== chess.fen() || isOver()) return;
+  const mine = chess.turn() === myColor ? -(score ?? 0) : score ?? 0; // the computer's view
+  // ponytail: accepts when clearly worse, or when level late in the game; not Stockfish's real draw logic
+  if (score !== null && (mine <= -50 || (chess.history().length >= 60 && mine <= 30))) return endGame(AGREED);
+  heard('The computer declines the draw.');
 }
 
 const runCmd = { undo, flip: () => { view.flipped = !view.flipped; update(); }, new: () => newGame() };
 $('undo').onclick = undo;
 $('flip').onclick = runCmd.flip;
 $('newGame').onclick = runCmd.new;
+$('resign').onclick = resign;
+$('draw').onclick = offerDraw;
 
 // ---- voice ----
-const voice = createVoice({
-  onInterim: (t) => heard(`“${t}”…`),
-  onFinal: handleSpeech,
-  onState: (on) => { $('mic').setAttribute('aria-pressed', String(on)); $('mic').querySelector('span').textContent = on ? 'Listening' : 'Speak'; },
-  onError: heard,
-});
-if (voice) $('mic').onclick = () => voice.toggle();
-else { $('mic').disabled = true; heard('Speech recognition is not available in this browser. Click to move.'); }
-
-async function handleSpeech(alts) {
-  heard(`“${alts[0]}”`);
-  const cmd = alts.map(parseSpoken).find((i) => i?.cmd);
-  if (cmd) return runCmd[cmd.cmd]();
-  if (!canHumanMove()) return heard(`“${alts[0]}” · it's not your move.`);
-
-  const legal = chess.moves({ verbose: true });
-  let ambiguous;
-  for (const a of alts) {
-    const c = matchMoves(parseSpoken(a), legal);
-    if (c.length === 1) return commit(c[0]);
-    if (c.length > 1) ambiguous ??= c;
-  }
-  if (ambiguous) return heard(`Which one: ${ambiguous.map((m) => m.san).join(' or ')}? Say the starting square too, e.g. “${ambiguous[0].from} to ${ambiguous[0].to}”.`);
-  if ((await chromeAIStatus()) === 'available') {
-    try {
-      const san = await chromeAIInterpret(alts[0], legal.map((m) => m.san));
-      if (san && commit(san)) return;
-    } catch (err) { console.warn('[checkmate] Chrome AI interpret failed:', err); }
-  }
-  heard(`No legal move in “${alts[0]}”. Try “knight to f3” or “e2 to e4”.`);
-}
+setupVoice({ chess, commit, canHumanMove, runCmd, heard });
 
 // ---- settings dialog ----
-const form = $('settingsForm');
-const syncGroups = () => {
-  $('aiOpts').hidden = form.mode.value !== 'ai';
-  $('onlineOpts').hidden = form.mode.value !== 'online';
-};
-
-async function refreshAIStatus() {
-  const s = await chromeAIStatus();
-  $('aiStatus').textContent = {
-    available: 'Chrome AI (Gemini Nano) is ready. It picks from the engine\'s best moves and explains them.',
-    downloadable: 'Chrome AI model not downloaded yet. Select "Chrome built-in AI" to start the download.',
-    downloading: 'Chrome AI model is downloading…',
-    unavailable: 'Chrome built-in AI is unavailable here (needs Chrome 138+ on a supported device). The classic engine will play.',
-  }[s] ?? s;
-}
-
-$('settingsBtn').onclick = () => {
-  for (const k of ['mode', 'color', 'level', 'engine', 'scene']) form[k].value = settings[k];
-  form.tilt.checked = settings.tilt;
-  form.speak.checked = settings.speak;
-  form.ambient.checked = settings.ambient;
-  syncGroups();
-  refreshAIStatus();
-  $('settings').returnValue = '';
-  $('settings').showModal();
-};
-
-form.addEventListener('change', async (e) => {
-  syncGroups();
-  if (e.target.name === 'scene' || e.target.name === 'ambient') {
-    Object.assign(settings, { scene: form.scene.value, ambient: form.ambient.checked });
-    applyLook();
+setupSettings(settings, {
+  onLive() { applyLook(); save(); },
+  onStart() {
+    if (settings.mode !== 'online') online.disconnect();
     save();
-  }
-  if (e.target.name === 'engine' && form.engine.value === 'chrome' && (await chromeAIStatus()) === 'downloadable') {
-    try {
-      // the change event still carries the click's user activation, which the download requires
-      await warmChromeAI((p) => { $('aiStatus').textContent = `Downloading Chrome AI model… ${Math.round(p * 100)}%`; });
-    } catch (err) { $('aiStatus').textContent = `Couldn't start Chrome AI: ${err.message}`; return; }
-    refreshAIStatus();
-  }
-});
-
-$('settings').addEventListener('close', () => {
-  if ($('settings').returnValue !== 'start') return;
-  Object.assign(settings, {
-    mode: form.mode.value, color: form.color.value, level: form.level.value, engine: form.engine.value,
-    scene: form.scene.value, tilt: form.tilt.checked, speak: form.speak.checked, ambient: form.ambient.checked,
-  });
-  if (settings.mode !== 'online') online.disconnect();
-  save();
-  applyLook();
-  newGame();
+    applyLook();
+    newGame();
+  },
 });
 
 if (settings.mode === 'online') settings.mode = 'local'; // a reopened window has no live connection
+if (settings.engine !== 'chrome') settings.engine = 'stockfish'; // pre-Stockfish saves said 'classic'
 applyLook();
 newGame();

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Checkmate · Voice Chess",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Play chess by voice or mouse: two players on one device, vs computer, or peer-to-peer online.",
   "minimum_chrome_version": "116",
   "icons": {
@@ -20,5 +20,8 @@
   "background": {
     "service_worker": "background.js",
     "type": "module"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   }
 }
