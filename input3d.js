@@ -142,6 +142,8 @@ export function createInput({ container, canvas, camera, controls, motion, pick,
 
   if (!container.hasAttribute('tabindex')) container.tabIndex = 0;
   container.addEventListener('blur', () => setHover(null));
+  // focusing the board announces a starting square, so the first arrow press already moves the cursor
+  container.addEventListener('focus', () => { if (!hoverSq) { keyboard = true; setHover(state().ui.selected ?? (state().flipped ? 'e7' : 'e2'), true); } });
   container.addEventListener('keydown', (e) => {
     const step = KEYS[e.key];
     if (!step && e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Escape') return;

@@ -21,8 +21,8 @@ export function buildSquares(scene) {
   const tileGeo = new THREE.BoxGeometry(0.96, 0.14, 0.96);
   const overGeo = new THREE.PlaneGeometry(0.96, 0.96).rotateX(-Math.PI / 2);
   const dotGeo = new THREE.CircleGeometry(0.17, 32).rotateX(-Math.PI / 2);
-  const ringGeo = new THREE.RingGeometry(0.36, 0.45, 48).rotateX(-Math.PI / 2);
-  const flat = (color, opacity) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
+  const ringGeo = new THREE.RingGeometry(0.38, 0.48, 48).rotateX(-Math.PI / 2);
+  const flat = (color, opacity) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, toneMapped: false }); // markers keep their true colour
   const dotMat = flat(0x2f9a3e, 0.8);
   const ringMat = flat(0xd23a2c, 0.9);
   const marker = (geo, mat, p, y) => Object.assign(new THREE.Mesh(geo, mat), { visible: false, renderOrder: 2 }).translateX(p.x).translateY(y).translateZ(p.z);
@@ -32,7 +32,7 @@ export function buildSquares(scene) {
       const p = at(sq);
       const tile = new THREE.Mesh(tileGeo, tileMats[((f * 3 + r * 5) % 4) * 2 + ((f + r) % 2 ? 0 : 1)]);
       tile.position.set(p.x, TOP - 0.07, p.z);
-      tile.castShadow = tile.receiveShadow = true;
+      tile.receiveShadow = true; // flush tiles never cast a visible shadow
       tile.userData.sq = sq;
       tiles.push(tile);
       overlays.set(sq, marker(overGeo, flat(0xffffff, 0.6), p, TOP + 0.003));

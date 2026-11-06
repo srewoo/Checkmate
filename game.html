@@ -8,6 +8,8 @@
 </head>
 <body data-scene="indoor">
   <div class="scene" aria-hidden="true"><span class="s1"></span><span class="s2"></span><span class="s3"></span></div>
+  <div id="emoteLayer" class="emote-layer" aria-hidden="true"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <div id="board3d" class="board3d" aria-label="3D chess board. Drag to look around, scroll to zoom, double-click to reset the view." hidden></div>
 
   <main class="app">
@@ -18,28 +20,34 @@
       <button id="settingsBtn" class="icon" aria-label="Settings">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
       </button>
+      <div id="evalBar" class="evalbar" role="img" aria-label="Evaluation" hidden><span></span></div>
     </header>
 
     <section class="table">
-      <p id="hint" class="hint3d">Drag to look around · scroll to zoom · double-click to reset</p>
+      <p id="hint" class="hint3d">Drag to look around · scroll to zoom · arrow keys + Enter to move</p>
       <div class="stage"><div id="board" class="board" role="grid" aria-label="Chess board"></div></div>
     </section>
 
-    <section class="panel glass">
+    <section id="panel" class="panel glass">
       <div class="voice">
         <button id="mic" class="mic" aria-pressed="false">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
           <span>Speak</span>
         </button>
-        <p id="heard">Say “knight to f3”, “e2 to e4”, “castle kingside”, or click a piece.</p>
+        <p id="heard" aria-live="polite">Say “knight to f3”, “e2 to e4”, “castle kingside”, or click a piece.</p>
+        <button id="panelToggle" class="icon ghost" aria-expanded="true" aria-controls="panel" aria-label="Minimise controls" title="Minimise controls">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
       </div>
       <div class="actions">
         <button id="undo">Undo</button>
+        <button id="hintBtn" hidden>Hint</button>
         <button id="flip">Flip board</button>
         <button id="newGame">New game</button>
         <button id="draw">Offer draw</button>
         <button id="resign">Resign</button>
       </div>
+      <div id="emotes" class="emotes" hidden></div>
       <p id="material" class="material" aria-live="polite"></p>
       <ol id="moves" class="moves" aria-label="Move list"></ol>
     </section>
@@ -53,6 +61,13 @@
         <label><input type="radio" name="mode" value="local" checked><span>2 players · this device</span></label>
         <label><input type="radio" name="mode" value="ai"><span>vs Computer</span></label>
         <label><input type="radio" name="mode" value="online"><span>Online · 2 extension users</span></label>
+        <label><input type="radio" name="mode" value="puzzle"><span>Puzzles</span></label>
+      </fieldset>
+
+      <fieldset id="puzzleOpts" class="seg"><legend>Puzzles</legend>
+        <label><input type="radio" name="pz" value="rush" checked><span>Puzzle Rush · 3 min</span></label>
+        <label><input type="radio" name="pz" value="practice"><span>Practice · rated</span></label>
+        <label><input type="radio" name="pz" value="daily"><span>Daily puzzle</span></label>
       </fieldset>
 
       <fieldset id="clockOpts" class="seg"><legend>Clock</legend>
@@ -73,8 +88,10 @@
           <label><input type="radio" name="level" value="medium" checked><span>Medium</span></label>
           <label><input type="radio" name="level" value="hard"><span>Hard</span></label>
           <label><input type="radio" name="level" value="master"><span>Master</span></label>
+          <label><input type="radio" name="level" value="ladder"><span>Opponent ladder</span></label>
         </fieldset>
-        <fieldset class="seg"><legend>Engine</legend>
+        <p id="ladderInfo" class="hint" hidden></p>
+        <fieldset id="engineOpts" class="seg"><legend>Engine</legend>
           <label><input type="radio" name="engine" value="stockfish" checked><span>Stockfish</span></label>
           <label><input type="radio" name="engine" value="chrome"><span>Chrome built-in AI</span></label>
         </fieldset>
@@ -118,7 +135,14 @@
         <label><input type="checkbox" name="speak" checked> Read moves aloud</label>
         <label><input type="checkbox" name="ambient" checked> Ambient sound</label>
         <label><input type="checkbox" name="sfx" checked> Move sounds</label>
+        <label><input type="checkbox" name="react" checked> Move reactions vs computer</label>
+        <label><input type="checkbox" name="evalBar"> Evaluation bar vs computer</label>
       </fieldset>
+
+      <details class="trophies">
+        <summary>Achievements <span id="trophyCount"></span></summary>
+        <ul id="trophies"></ul>
+      </details>
 
       <details class="licenses">
         <summary>Open-source licenses</summary>
@@ -128,6 +152,7 @@
             <a href="https://github.com/nmrugg/stockfish.js/tree/v17.1.0" target="_blank" rel="noopener">stockfish.js v17.1.0</a>,
             <a href="https://github.com/official-stockfish/Stockfish/tree/sf_17.1" target="_blank" rel="noopener">Stockfish sf_17.1</a></li>
           <li><a href="https://github.com/jhlywa/chess.js" target="_blank" rel="noopener">chess.js</a>: BSD-2-Clause</li>
+          <li>Puzzles: a selection from the <a href="https://database.lichess.org/#puzzles" target="_blank" rel="noopener">Lichess puzzle database</a>, CC0</li>
           <li><a href="https://github.com/mrdoob/three.js/tree/r170" target="_blank" rel="noopener">three.js r170</a> incl. OrbitControls, RoomEnvironment: MIT</li>
         </ul>
         <p class="hint">Full license texts ship in <code>LICENSE</code> and <code>vendor/</code>.</p>
@@ -157,7 +182,10 @@
     <form method="dialog">
       <h2 id="resultTitle"></h2>
       <p id="resultReason"></p>
+      <p id="resultExtra" class="hint"></p>
+      <div id="resultSummary" class="summary" aria-live="polite"></div>
       <footer class="row end">
+        <button type="button" id="replayBtn" hidden>Watch replay</button>
         <button type="button" id="copyPgn">Copy PGN</button>
         <button value="close" class="ghost">Close</button>
         <button value="rematch" class="primary">Rematch</button>

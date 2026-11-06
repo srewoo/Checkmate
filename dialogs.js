@@ -16,6 +16,10 @@ export function showResult(title, reason, pgn, onRematch) {
   const d = $('result');
   $('resultTitle').textContent = title;
   $('resultReason').textContent = reason;
+  $('resultExtra').textContent = ''; // filled by listeners (ladder, analysis) after the card opens
+  $('resultSummary').textContent = '';
+  $('copyPgn').hidden = !pgn;
+  $('replayBtn').hidden = true;
   $('copyPgn').textContent = 'Copy PGN';
   $('copyPgn').onclick = async () => {
     try { await navigator.clipboard.writeText(pgn); $('copyPgn').textContent = 'Copied'; } catch { $('copyPgn').textContent = 'Copy failed'; }
@@ -27,9 +31,10 @@ export function showResult(title, reason, pgn, onRematch) {
 
 /** Two-step button: the first press arms it for 3 s, the second press confirms. Returns true on confirm. */
 export function confirmed(btn, onChange) {
+  clearTimeout(btn.armTimer); // repeated presses must not leave an older timer to disarm a newer arm early
   if (btn.dataset.armed) { delete btn.dataset.armed; return true; }
   btn.dataset.armed = '1';
-  setTimeout(() => { delete btn.dataset.armed; onChange(); }, 3000);
+  btn.armTimer = setTimeout(() => { delete btn.dataset.armed; onChange(); }, 3000);
   onChange();
   return false;
 }

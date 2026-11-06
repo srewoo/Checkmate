@@ -1,7 +1,7 @@
 // WebGL board: room + table, board, pieces, captured-piece rows, turn label, orbit camera, click/keyboard-to-square.
 import * as THREE from './vendor/three.module.min.js';
 import { OrbitControls } from './vendor/OrbitControls.js';
-import { RoomEnvironment } from './vendor/RoomEnvironment.js';
+import { createRenderer, environment } from './renderer3d.js';
 import { makePiece, setGlow, glowMaterials, pieceMaterials } from './pieces3d.js';
 import { FILES, TOP, at, COLORS, buildSquares } from './squares3d.js';
 import { createInput } from './input3d.js';
@@ -22,27 +22,6 @@ function graveSpot(color, i) {
   return new THREE.Vector3(((i % 8) - 3.5) * side, TABLE_Y, side * (5.55 + Math.floor(i / 8) * 0.8));
 }
 
-function createRenderer(container) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.toneMapping = THREE.NeutralToneMapping; // keeps the walnut brown where ACES pushed it pink
-  renderer.toneMappingExposure = 1.08;
-  container.append(renderer.domElement);
-  return renderer;
-}
-
-/** Image-based lighting from a procedural studio room, so lacquer and varnish pick up soft reflections. */
-function environment(renderer) {
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  const room = new RoomEnvironment();
-  const tex = pmrem.fromScene(room, 0.04).texture;
-  room.dispose();
-  pmrem.dispose();
-  return tex;
-}
-
 export function createBoard3D(container, onSquare, onOrbit) {
   const renderer = createRenderer(container);
   const scene = new THREE.Scene();
@@ -50,7 +29,7 @@ export function createBoard3D(container, onSquare, onOrbit) {
   // Only lacquered/varnished (physical) materials reflect the studio; the rooms keep their own light.
   const gloss = (m, envMapIntensity) => { if (m?.isMeshPhysicalMaterial && !m.envMap && !m.userData.noEnv) Object.assign(m, { envMap, envMapIntensity, needsUpdate: true }); };
   const lacquer = (root) => root.traverse((o) => { for (const m of [o.material].flat()) gloss(m, 0.4); });
-  for (const m of Object.values(pieceMaterials())) gloss(m, 0.85); // pieces are the glossiest thing on the table
+  for (const m of Object.values(pieceMaterials())) gloss(m, 0.55); // glossiest thing on the table, but not so much ambient fill that the turned form flattens out
   const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 200);
   const controls = new OrbitControls(camera, renderer.domElement);
   Object.assign(controls, { enablePan: false, enableDamping: true, minDistance: 7, maxDistance: 30, maxPolarAngle: 1.38, minPolarAngle: 0.05 });
@@ -64,7 +43,7 @@ export function createBoard3D(container, onSquare, onOrbit) {
   Object.assign(sun.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14, far: 80 });
   sun.shadow.bias = -0.0004;
   sun.shadow.normalBias = 0.02;
-  const fill = new THREE.DirectionalLight(0xa8c0ff, 0.45);
+  const fill = new THREE.DirectionalLight(0xa8c0ff, 0.7); // cool rim from behind separates pieces from the board
   fill.position.set(-8, 8, -6);
   // warm key from above: the table and board are the brightest thing in every room, the walls fall off
   const key = new THREE.SpotLight(0xffd49a, 0, 0, 0.34, 1, 0);
@@ -187,6 +166,10 @@ export function createBoard3D(container, onSquare, onOrbit) {
     if (toppled && (toppled !== king || !chess.isCheckmate())) { motion.pose(toppled, {}, { dur: 0.4 }); toppled = null; }
     if (!fresh || !king) return;
     if (!chess.isCheckmate()) { motion.nudge(0.03); return; }
+    // cinematic: the camera glides in towards the fallen king, keeping its angle, then the player can orbit as usual
+    const kp = at(checkSq);
+    const back = camera.position.clone().sub(controls.target).normalize().multiplyScalar(10);
+    camTween = { from: camera.position.clone(), to: kp.clone().add(back), fromT: controls.target.clone(), target: kp.clone(), t0: performance.now() + 300, dur: 1600 };
     toppled = king;
     motion.pose(king, { rz: Math.random() < 0.5 ? 1.67 : -1.67, y: 0.37 }, { dur: 1.1, delay: 0.5 });
     const winner = chess.turn() === 'w' ? 'b' : 'w';
@@ -200,7 +183,9 @@ export function createBoard3D(container, onSquare, onOrbit) {
   let flipped = null;
   let camTween = null;
   function homeCamera(animate) {
-    const { to, target, fov } = fitView(camera, container.clientWidth / Math.max(1, container.clientHeight), flipped);
+    const aspect = container.clientWidth / Math.max(1, container.clientHeight);
+    const { to, target, fov } = fitView(camera, aspect, flipped);
+    label.mesh.visible = aspect >= 0.9; // portrait frames the board tighter and the HUD already shows the status
     camera.fov = fov;
     camera.updateProjectionMatrix();
     controls.maxDistance = Math.max(30, to.distanceTo(target) * 1.3); // narrow windows sit further back
@@ -232,7 +217,19 @@ export function createBoard3D(container, onSquare, onOrbit) {
   });
 
   const shake = new THREE.Vector3();
+  // Frame-time probe: skip 30 warm-up frames (shader compiles), average the next 60, drop supersampling if > 20 ms.
+  const perf = { n: 0, t0: 0 };
+  function probe(now) {
+    perf.n++;
+    if (perf.n === 30) perf.t0 = now;
+    if (perf.n !== 90) return;
+    if ((now - perf.t0) / 60 > 20 && renderer.getPixelRatio() > devicePixelRatio) {
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      resize();
+    }
+  }
   function frame(now) {
+    if (perf.n < 90) probe(now);
     input.tick();
     motion.tick(now);
     fx.tick(now);
@@ -247,7 +244,7 @@ export function createBoard3D(container, onSquare, onOrbit) {
     const pulse = calm() ? 0.6 : 0.45 + 0.4 * Math.sin(now * 0.006);
     for (const m of Object.values(glowMaterials())) m.emissiveIntensity = pulse;
     if (camTween) {
-      const k = Math.min(1, (now - camTween.t0) / 800);
+      const k = Math.max(0, Math.min(1, (now - camTween.t0) / (camTween.dur ?? 800)));
       camera.position.lerpVectors(camTween.from, camTween.to, ease(k));
       controls.target.lerpVectors(camTween.fromT, camTween.target, ease(k));
       if (k === 1) camTween = null;
@@ -265,6 +262,14 @@ export function createBoard3D(container, onSquare, onOrbit) {
     setScene,
     /** 'wood' (default) | 'marble' | 'glass' | 'metal': swaps board and piece materials in place. */
     setTheme,
+    /** Glide back to the seat (new game, end of a replay). */
+    home: () => homeCamera(true),
+    /** Move-quality reaction on square `sq`: 'great' sparkles, 'blunder' puffs dust and shakes the table. */
+    react(kind, sq) {
+      if (kind === 'great') fx.sparkle(at(sq));
+      else if (kind === 'blunder') { fx.dust(at(sq)); motion.nudge(0.07); }
+      else if (kind === 'mistake' || kind === 'missed-mate') motion.nudge(0.035);
+    },
     /** Chess clock on the table: null hides it, else {w, b, turn, running, flagged} (ms left per side). */
     setClock: (s) => clock.set(s),
     /** Same view object the 2D board uses; `status` is printed on the table. */
@@ -277,7 +282,7 @@ export function createBoard3D(container, onSquare, onOrbit) {
       for (const [sq, o] of overlays) {
         const kind = sq === view.selected ? 'sel' : sq === checkSq ? 'check' : view.last && (sq === view.last.from || sq === view.last.to) ? 'last' : null;
         o.visible = Boolean(kind);
-        if (kind) { o.material.color.setHex(COLORS[kind]); o.material.opacity = kind === 'last' ? 0.4 : 0.6; }
+        if (kind) { o.material.color.setHex(COLORS[kind]); o.material.opacity = kind === 'last' ? 0.55 : 0.6; }
         dots.get(sq).visible = view.targets.get(sq) === false;
         rings.get(sq).visible = view.targets.get(sq) === true;
       }

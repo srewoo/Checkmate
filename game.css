@@ -138,14 +138,23 @@ body.three .hint3d[hidden] { display: none; }
 .mic[aria-pressed="true"] { background: #b3261e; border-color: transparent; animation: pulse 1.4s ease-out infinite; }
 @keyframes pulse { from { box-shadow: 0 0 0 0 rgba(179, 38, 30, 0.7); } to { box-shadow: 0 0 0 12px rgba(179, 38, 30, 0); } }
 #heard { margin: 0; flex: 1; color: var(--muted); min-height: 2.8em; display: flex; align-items: center; }
-.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+#panelToggle svg { transition: transform 0.2s; }
+/* minimised: one slim bar (Speak, last message, expand) so the board is unobstructed */
+.panel.min { padding: 6px 10px; grid-template-columns: 1fr; }
+.panel.min :is(.actions, .material, .moves, .emotes) { display: none; }
+.panel.min #heard { min-height: 0; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.panel.min .mic { padding: 6px 12px; min-height: 32px; }
+.panel.min #panelToggle { width: 32px; height: 32px; }
+.panel.min #panelToggle svg { transform: rotate(180deg); }
+.actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .actions button { flex: 1 1 auto; }
 #resign[data-armed] { background: #b3261e; border-color: transparent; color: #fff; font-weight: 600; }
 #resign[data-armed]:hover { background: #c62f26; }
 .material { margin: 0; font-size: 12.5px; letter-spacing: 0.02em; color: var(--muted); font-variant-numeric: tabular-nums; }
 .material:empty { display: none; }
-.moves { margin: 0; padding: 4px 0 0 2.2em; max-height: 64px; overflow: auto; columns: 3; font: 13px/1.6 var(--serif); color: var(--muted); font-variant-numeric: tabular-nums; }
+.moves { margin: 0; padding: 4px 0 0 2.2em; max-height: 64px; overflow: auto; display: grid; grid-template-columns: repeat(3, 1fr); column-gap: 2.2em; font: 13px/1.6 var(--serif); color: var(--muted); font-variant-numeric: tabular-nums; }
 .moves li::marker { color: var(--amber); }
+.moves:empty::before { content: "No moves yet"; margin-left: -2.2em; }
 .moves li:last-child { color: var(--ink); }
 
 /* ---- settings dialog ---- */
@@ -203,3 +212,50 @@ textarea { width: 100%; resize: vertical; padding: 8px; border-radius: 8px; bord
 .licenses ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 4px; }
 .licenses a { color: var(--amber); }
 .licenses code { font-size: 12px; }
+
+/* ---- review: moves are clickable; the shown position is outlined ---- */
+.moves span[data-ply] { cursor: pointer; padding: 0 3px; border-radius: 4px; }
+.moves span[data-ply]:hover { background: rgba(255, 240, 220, 0.12); }
+.moves span.cur { color: var(--ink); background: rgba(226, 163, 86, 0.28); }
+#puzzleOpts[hidden], #engineOpts[hidden], #ladderInfo[hidden] { display: none; }
+
+/* ---- evaluation bar: White's share of the win chance, along the bottom edge of the header ---- */
+.bar { position: relative; }
+.evalbar { position: absolute; left: 16px; right: 16px; bottom: -5px; height: 5px; border-radius: 3px; background: #15100c; box-shadow: 0 0 0 1px var(--line); overflow: hidden; }
+.evalbar span { display: block; height: 100%; width: var(--w, 50%); background: linear-gradient(90deg, #fff6e6, #e9d8b8); transition: width 0.6s ease; }
+
+/* ---- toasts: move reactions, puzzle results, achievements ---- */
+.toast {
+  position: fixed; z-index: 5; left: 50%; top: 22%; transform: translate(-50%, -8px) scale(0.96); opacity: 0; pointer-events: none;
+  padding: 10px 18px; border-radius: 999px; font: 700 17px/1.2 var(--serif); letter-spacing: 0.01em; white-space: nowrap;
+  background: rgba(22, 12, 6, 0.9); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  transition: opacity 0.2s, transform 0.25s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.toast[data-kind="great"] { color: #2a1606; background: linear-gradient(180deg, #ffd978, #e2a356); border-color: transparent; }
+.toast[data-kind="trophy"] { color: #2a1606; background: linear-gradient(180deg, #fff1c2, #f2c14e); border-color: transparent; }
+.toast[data-kind="blunder"], .toast[data-kind="missed-mate"] { color: #fff; background: rgba(176, 38, 28, 0.94); }
+.toast[data-kind="mistake"] { color: #ffd0c4; }
+.toast[data-kind="inaccuracy"] { color: #ffe3a8; }
+
+/* ---- online emotes ---- */
+.emotes { display: flex; gap: 6px; }
+.emotes[hidden] { display: none; }
+.emotes button { flex: 1; font-size: 18px; padding: 4px; min-height: 34px; }
+.emote-layer { position: fixed; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+.emote { position: absolute; bottom: 30%; font-size: 44px; animation: emote-rise 2.2s ease-out forwards; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5)); }
+@keyframes emote-rise { 0% { transform: translateY(20px) scale(0.6); opacity: 0; } 15% { transform: translateY(0) scale(1.15); opacity: 1; } 100% { transform: translateY(-220px) scale(1); opacity: 0; } }
+
+/* ---- result card: post-game accuracy; settings: achievements ---- */
+.summary ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13.5px; color: var(--muted); }
+.summary b { color: var(--ink); }
+.summary:empty { display: none; }
+#resultExtra:empty { display: none; }
+.trophies { font-size: 13px; }
+.trophies summary { cursor: pointer; font-weight: 600; }
+.trophies ul { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.trophies li { color: var(--muted); opacity: 0.55; }
+.trophies li::before { content: "🔒 "; }
+.trophies li.got { opacity: 1; }
+.trophies li.got::before { content: "🏆 "; }
+.trophies li b { color: var(--ink); }

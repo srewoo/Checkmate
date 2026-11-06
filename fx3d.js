@@ -67,6 +67,10 @@ export function createFx(scene) {
         spread: 5, speed: 3.2, up: 3.5, life: 5, spin: 14,
       }));
     },
+    /** A small gold fountain from one square: the "great move" reaction. */
+    sparkle(at) {
+      add(() => burst(scene, { count: 60, geo: confettiGeo, colors: [...GOLD, 0xfff3c4], origin: at.clone().setY(0.6), spread: 0.5, speed: 1.4, up: 4, life: 2.2, spin: 12 }));
+    },
     tick(now) { live = live.filter((step) => step(now)); },
   };
 }

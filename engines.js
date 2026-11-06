@@ -16,10 +16,11 @@ export const search = (msg) => new Promise((resolve) => {
 });
 
 /** Stockfish's score for the side to move (centipawns), or null if Stockfish is unavailable. */
-export const evaluate = (fen) => stockfish.evaluate(fen).catch(() => null);
+export const evaluate = (fen, movetime) => stockfish.evaluate(fen, movetime).catch(() => null);
 
 /** A chess.js move input for the side to move. */
 export async function engineMove(fen, level) {
+  if (level === 'beginner') return (await search({ fen, level: 'easy' })).san; // weaker than Stockfish's floor
   try {
     const m = await stockfish.bestMove(fen, level);
     if (m) return m;

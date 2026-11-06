@@ -43,3 +43,11 @@ test('Stockfish finds mate in one', { timeout: 30000 }, async () => {
   // back-rank mate: Ra8#
   assert.deepEqual(await bestMove('6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1', 'master'), { from: 'a1', to: 'a8', promotion: undefined });
 });
+
+test('numeric levels are a clamped UCI_Elo', () => {
+  const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+  assert.ok(goCommands(fen, 1600).includes('setoption name UCI_Elo value 1600'));
+  assert.ok(goCommands(fen, 900).includes('setoption name UCI_Elo value 1320'));
+  assert.ok(goCommands(fen, 1600).includes('setoption name UCI_LimitStrength value true'));
+  assert.equal(goCommands(fen, 'easy').at(-1), 'go movetime 150');
+});

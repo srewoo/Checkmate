@@ -3,22 +3,25 @@
 import * as THREE from './vendor/three.module.min.js';
 
 const V = (x, y) => new THREE.Vector2(x, y);
+// A crease: the point twice. LatheGeometry averages normals across a point; the zero-length segment between the
+// copies has no normal, so each side keeps its own and the edge renders sharp instead of as a soft 45° bevel.
+const C = (x, y) => [V(x, y), V(x, y)];
 const arc = (cy, r, a0, a1, n = 10, sy = 1) =>
   Array.from({ length: n + 1 }, (_, i) => {
     const a = a0 + ((a1 - a0) * i) / n;
     return V(Math.max(0, r * Math.cos(a)), cy + r * Math.sin(a) * sy);
   });
 
-const BASE = [V(0, 0), V(0.38, 0), V(0.38, 0.05), V(0.34, 0.08), V(0.34, 0.12), V(0.28, 0.15)];
+const BASE = [V(0, 0), ...C(0.38, 0), ...C(0.38, 0.05), ...C(0.34, 0.08), ...C(0.34, 0.12), ...C(0.28, 0.15)];
 const PROFILES = {
-  p: [...BASE, V(0.22, 0.18), V(0.13, 0.4), V(0.21, 0.44), V(0.21, 0.47), V(0.12, 0.5), ...arc(0.62, 0.15, -1.2, Math.PI / 2)],
-  r: [...BASE, V(0.26, 0.2), V(0.22, 0.6), V(0.29, 0.66), V(0.29, 0.84), V(0.2, 0.84), V(0.2, 0.78), V(0, 0.78)],
+  p: [...BASE, V(0.22, 0.18), V(0.13, 0.4), ...C(0.21, 0.44), ...C(0.21, 0.47), V(0.12, 0.5), ...arc(0.62, 0.15, -1.2, Math.PI / 2)],
+  r: [...BASE, V(0.26, 0.2), V(0.22, 0.6), ...C(0.29, 0.66), ...C(0.29, 0.84), ...C(0.2, 0.84), ...C(0.2, 0.78), V(0, 0.78)],
   n: [...BASE, V(0.25, 0.2), V(0.23, 0.32), V(0, 0.32)],
-  b: [...BASE, V(0.2, 0.2), V(0.12, 0.58), V(0.22, 0.62), V(0.22, 0.65), V(0.13, 0.68),
+  b: [...BASE, V(0.2, 0.2), V(0.12, 0.58), ...C(0.22, 0.62), ...C(0.22, 0.65), V(0.13, 0.68),
     ...arc(0.84, 0.17, -1.3, 1.25, 10, 1.25), ...arc(1.08, 0.05, -1.5, Math.PI / 2, 6)],
-  q: [...BASE, V(0.23, 0.2), V(0.13, 0.74), V(0.25, 0.79), V(0.25, 0.82), V(0.15, 0.86), V(0.27, 1.04),
+  q: [...BASE, V(0.23, 0.2), V(0.13, 0.74), ...C(0.25, 0.79), ...C(0.25, 0.82), V(0.15, 0.86), ...C(0.27, 1.04),
     V(0.2, 1.05), V(0.14, 1.02), ...arc(1.1, 0.07, -1.5, Math.PI / 2, 6)],
-  k: [...BASE, V(0.24, 0.2), V(0.14, 0.8), V(0.26, 0.85), V(0.26, 0.88), V(0.16, 0.92), V(0.26, 1.1), V(0.16, 1.15), V(0, 1.16)],
+  k: [...BASE, V(0.24, 0.2), V(0.14, 0.8), ...C(0.26, 0.85), ...C(0.26, 0.88), V(0.16, 0.92), ...C(0.26, 1.1), V(0.16, 1.15), V(0, 1.16)],
 };
 
 // side silhouette, nose towards +x: chest, throat, jaw, muzzle, forehead, two ears, arched mane
@@ -71,7 +74,7 @@ export function woodTexture(light, dark, { size = 256, lines = 40, repeat = 1, d
   t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set(repeat, repeat);
-  t.anisotropy = 4;
+  t.anisotropy = 8;
   return t;
 }
 
@@ -130,11 +133,11 @@ function extras(type, color) {
     for (let i = 0; i < 4; i++) parts.push({ g: geo('merlon', () => new THREE.BoxGeometry(0.13, 0.1, 0.1)), at: [Math.cos(i * Math.PI / 2) * 0.24, 0.89, Math.sin(i * Math.PI / 2) * 0.24], ry: -i * Math.PI / 2 });
   }
   if (type === 'q') {
-    for (let i = 0; i < 8; i++) parts.push({ g: geo('pearl', () => new THREE.SphereGeometry(0.045, 12, 8)), at: [Math.cos(i * Math.PI / 4) * 0.25, 1.07, Math.sin(i * Math.PI / 4) * 0.25] });
+    for (let i = 0; i < 8; i++) parts.push({ g: geo('pearl', () => new THREE.SphereGeometry(0.065, 16, 10)), at: [Math.cos(i * Math.PI / 4) * 0.25, 1.07, Math.sin(i * Math.PI / 4) * 0.25] });
   }
   if (type === 'k') {
-    parts.push({ g: geo('crossV', () => new THREE.BoxGeometry(0.07, 0.28, 0.07)), at: [0, 1.29, 0] });
-    parts.push({ g: geo('crossH', () => new THREE.BoxGeometry(0.22, 0.07, 0.07)), at: [0, 1.32, 0] });
+    parts.push({ g: geo('crossV', () => new THREE.BoxGeometry(0.09, 0.28, 0.09)), at: [0, 1.29, 0] });
+    parts.push({ g: geo('crossH', () => new THREE.BoxGeometry(0.24, 0.09, 0.09)), at: [0, 1.32, 0] });
   }
   if (type === 'n') {
     parts.push({

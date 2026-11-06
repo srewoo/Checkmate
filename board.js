@@ -3,6 +3,7 @@
 // Solid glyphs for both sides, coloured by CSS; ︎ stops the pawn rendering as an emoji.
 const GLYPH = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟︎' };
 const FILES = 'abcdefgh';
+const NAMES = { k: 'king', q: 'queen', r: 'rook', b: 'bishop', n: 'knight', p: 'pawn' };
 
 /**
  * @param {HTMLElement} el
@@ -25,7 +26,7 @@ export function renderBoard(el, chess, view) {
     const rank = i % 8 === 0 ? `<i class="rk">${r + 1}</i>` : '';
     const file = i >= 56 ? `<i class="fl">${FILES[f]}</i>` : '';
     const piece = p ? `<b class="pc ${p.color}">${GLYPH[p.type]}</b>` : '';
-    html.push(`<div class="${cls.join(' ')}" data-sq="${sq}" role="gridcell" aria-label="${sq}${p ? ` ${p.color === 'w' ? 'white' : 'black'} ${p.type}` : ''}">${rank}${file}${piece}</div>`);
+    html.push(`<div class="${cls.join(' ')}" data-sq="${sq}" role="gridcell" tabindex="0" aria-label="${sq}${p ? ` ${p.color === 'w' ? 'white' : 'black'} ${NAMES[p.type]}` : ''}">${rank}${file}${piece}</div>`);
   }
   el.innerHTML = html.join('');
 }

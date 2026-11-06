@@ -3,7 +3,7 @@ import { Chess } from './vendor/chess.js';
 
 const VALUE = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
 const MATE = 100000;
-const LEVELS = { easy: { depth: 1, pool: 0 }, medium: { depth: 2, pool: 5 }, hard: { depth: 3, pool: 3 } };
+const LEVELS = { easy: { depth: 1, pool: 0 }, medium: { depth: 2, pool: 5 }, hard: { depth: 3, pool: 3 }, master: { depth: 3, pool: 1 } };
 
 // Centralisation bonus (0 in corners, ~12 in the middle), cheap stand-in for piece-square tables.
 const center = (sq) => {

@@ -8,10 +8,12 @@ const TABLE = -0.15;
 const ROOM_LINE = 0.45; // NDC y the far table edge must stay under: the ~27% of the frame above it shows the room
 
 const vecs = (pts) => pts.map(([x, y, z]) => new THREE.Vector3(x, y, z));
-function mustSee(s) {
+// Portrait drops what the HUD already shows (clock, status label) and the room line, so the board can fill the width.
+function mustSee(s, portrait) {
   const pts = [];
   for (const x of [-4.7, 4.7]) for (const z of [-4.7, 4.7]) pts.push([x, 0, z]); // board frame
   for (const x of [-4, 4]) for (const z of [-6.6, 6.6]) pts.push([x, TABLE, z]); // captured rows
+  if (portrait) return vecs(pts);
   for (const x of [-2.4, 2.4]) pts.push([x, TABLE, 7.6 * s]); // status label at the player's edge
   pts.push([8.4, 1.1, 0.9], [8.4, 1.1, -0.9], [8.4, TABLE, 0.9], [8.4, TABLE, -0.9]); // chess clock, turned towards the seat
   return vecs(pts);
@@ -25,9 +27,10 @@ export function fitView(camera, aspect, flipped) {
   probe.aspect = aspect;
   probe.fov = aspect < 0.9 ? 50 : 40;
   probe.updateProjectionMatrix();
-  const [yMin, yMax] = aspect < 0.9 ? [-0.36, 0.68] : [-0.6, 0.8]; // NDC band between the header and the bottom panel (taller in portrait)
-  const must = mustSee(s);
-  const far = farEdge(s);
+  const [yMin, yMax] = aspect < 0.9 ? [-0.56, 0.66] : [-0.6, 0.8]; // NDC band between the header (~0.74) and the bottom panel (~-0.63)
+  const portrait = aspect < 0.9;
+  const must = mustSee(s, portrait);
+  const far = portrait ? [] : farEdge(s);
   const dir = new THREE.Vector3(0, Math.sin(PITCH), Math.cos(PITCH) * s);
   const target = new THREE.Vector3();
   const v = new THREE.Vector3();

@@ -7,8 +7,11 @@ export const SF_LEVELS = {
 };
 
 /** UCI lines for one search. Every option is resent so switching level mid-session can't leave a stale limit. */
+/** `level` is a name in SF_LEVELS or a number: a target Elo (ladder opponents), clamped to Stockfish's 1320-3190. */
 export function goCommands(fen, level, movetime) {
-  const sf = SF_LEVELS[level] ?? SF_LEVELS.medium;
+  const sf = typeof level === 'number'
+    ? { opts: { UCI_LimitStrength: true, UCI_Elo: Math.round(Math.min(3190, Math.max(1320, level))) }, movetime: level < 2000 ? 500 : 900 }
+    : SF_LEVELS[level] ?? SF_LEVELS.medium;
   return [...Object.entries(sf.opts).map(([k, v]) => `setoption name ${k} value ${v}`), `position fen ${fen}`, `go movetime ${movetime ?? sf.movetime}`];
 }
 
@@ -56,6 +59,6 @@ export function createStockfish(url) {
     /** Resolves to a chess.js move input, or null if the side to move has no legal move. */
     bestMove: async (fen, level) => (await go(goCommands(fen, level))).move,
     /** Full-strength score in centipawns for the side to move. */
-    evaluate: async (fen) => (await go(goCommands(fen, 'master', 400))).score,
+    evaluate: async (fen, movetime = 400) => (await go(goCommands(fen, 'master', movetime))).score,
   };
 }

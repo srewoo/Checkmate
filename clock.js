@@ -27,12 +27,16 @@ export function renderClockHud(el, s) {
   }
 }
 
-export function createClock(control, now = () => performance.now()) {
-  let left = { w: control.base, b: control.base };
-  let turn = 'w';
+/**
+ * `resume` ({w, b, turn, plies}) restores a saved game paused: time starts again with the next move. Undo past the
+ * resume point keeps the saved times (ponytail: per-move times aren't saved; save `history` if that ever matters).
+ */
+export function createClock(control, now = () => performance.now(), resume = null) {
+  let left = resume ? { w: resume.w, b: resume.b } : { w: control.base, b: control.base };
+  let turn = resume?.turn ?? 'w';
   let since = null; // when the running side's time started; null = stopped
   let flagged = null;
-  const history = [];
+  const history = Array.from({ length: resume?.plies ?? 0 }, () => ({ ...left }));
   const running = (c) => (c === turn && since !== null ? left[c] - (now() - since) : left[c]);
   const freeze = () => { left[turn] = running(turn); since = null; };
 

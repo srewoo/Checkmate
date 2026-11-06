@@ -2,8 +2,8 @@
 import { chromeAIStatus, warmChromeAI } from './ai.js';
 
 const $ = (id) => document.getElementById(id);
-const RADIOS = ['mode', 'color', 'level', 'engine', 'clock', 'scene', 'theme'];
-const CHECKS = ['tilt', 'speak', 'ambient', 'sfx'];
+const RADIOS = ['mode', 'color', 'level', 'engine', 'clock', 'pz', 'scene', 'theme'];
+const CHECKS = ['tilt', 'speak', 'ambient', 'sfx', 'react', 'evalBar'];
 const LIVE = ['scene', 'theme', 'ambient', 'sfx']; // applied as soon as they change, no new game needed
 
 async function refreshAIStatus() {
@@ -16,14 +16,17 @@ async function refreshAIStatus() {
   }[s] ?? s;
 }
 
-export function setupSettings(settings, { onLive, onStart }) {
+export function setupSettings(settings, { onOpen, onLive, onStart }) {
   const form = $('settingsForm');
   const dialog = $('settings');
   const read = (k) => (CHECKS.includes(k) ? form[k].checked : form[k].value);
   const syncGroups = () => {
     $('aiOpts').hidden = form.mode.value !== 'ai';
     $('onlineOpts').hidden = form.mode.value !== 'online';
-    $('clockOpts').hidden = form.mode.value === 'online';
+    $('puzzleOpts').hidden = form.mode.value !== 'puzzle';
+    $('clockOpts').hidden = form.mode.value === 'online' || form.mode.value === 'puzzle';
+    $('engineOpts').hidden = form.level.value === 'ladder'; // ladder opponents are always Stockfish
+    $('ladderInfo').hidden = form.level.value !== 'ladder';
   };
 
   $('settingsBtn').onclick = () => {
@@ -31,6 +34,7 @@ export function setupSettings(settings, { onLive, onStart }) {
     for (const k of CHECKS) form[k].checked = settings[k];
     syncGroups();
     refreshAIStatus();
+    onOpen?.();
     dialog.returnValue = '';
     dialog.showModal();
   };
