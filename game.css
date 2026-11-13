@@ -227,7 +227,8 @@ textarea { width: 100%; resize: vertical; padding: 8px; border-radius: 8px; bord
 /* ---- toasts: move reactions, puzzle results, achievements ---- */
 .toast {
   position: fixed; z-index: 5; left: 50%; top: 22%; transform: translate(-50%, -8px) scale(0.96); opacity: 0; pointer-events: none;
-  padding: 10px 18px; border-radius: 999px; font: 700 17px/1.2 var(--serif); letter-spacing: 0.01em; white-space: nowrap;
+  padding: 10px 18px; border-radius: 22px; font: 700 17px/1.25 var(--serif); letter-spacing: 0.01em;
+  width: max-content; max-width: min(88vw, 520px); text-align: center; text-wrap: balance;
   background: rgba(22, 12, 6, 0.9); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   transition: opacity 0.2s, transform 0.25s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
@@ -251,6 +252,18 @@ textarea { width: 100%; resize: vertical; padding: 8px; border-radius: 8px; bord
 .summary b { color: var(--ink); }
 .summary:empty { display: none; }
 #resultExtra:empty { display: none; }
+.skillsbox { font-size: 13px; }
+.skillsbox summary { cursor: pointer; font-weight: 600; }
+.skillsbox ul { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.skillsbox meter { width: 120px; vertical-align: middle; }
+.coach { margin-top: 10px; display: grid; gap: 6px; font-size: 13px; }
+.coach h3 { margin: 0; font-size: 14px; }
+.coach p { margin: 0; }
+.coach button { margin-left: 6px; padding: 2px 8px; font-size: 12px; }
+.coach .said { font-style: italic; color: var(--muted); }
+.pgnbox { font-size: 13px; }
+.pgnbox summary { cursor: pointer; font-weight: 600; }
+.pgnbox textarea { width: 100%; box-sizing: border-box; font: 12px ui-monospace, monospace; }
 .trophies { font-size: 13px; }
 .trophies summary { cursor: pointer; font-weight: 600; }
 .trophies ul { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; }

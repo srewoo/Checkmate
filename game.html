@@ -67,6 +67,7 @@
       <fieldset id="puzzleOpts" class="seg"><legend>Puzzles</legend>
         <label><input type="radio" name="pz" value="rush" checked><span>Puzzle Rush · 3 min</span></label>
         <label><input type="radio" name="pz" value="practice"><span>Practice · rated</span></label>
+        <label><input type="radio" name="pz" value="focus"><span>Weak spots</span></label>
         <label><input type="radio" name="pz" value="daily"><span>Daily puzzle</span></label>
       </fieldset>
 
@@ -91,6 +92,13 @@
           <label><input type="radio" name="level" value="ladder"><span>Opponent ladder</span></label>
         </fieldset>
         <p id="ladderInfo" class="hint" hidden></p>
+        <fieldset id="styleOpts" class="seg"><legend>Style</legend>
+          <label><input type="radio" name="style" value="balanced" checked><span>Balanced</span></label>
+          <label><input type="radio" name="style" value="aggressive"><span>Aggressive</span></label>
+          <label><input type="radio" name="style" value="defensive"><span>Defensive</span></label>
+          <label><input type="radio" name="style" value="tactical"><span>Tactical</span></label>
+          <label><input type="radio" name="style" value="positional"><span>Positional</span></label>
+        </fieldset>
         <fieldset id="engineOpts" class="seg"><legend>Engine</legend>
           <label><input type="radio" name="engine" value="stockfish" checked><span>Stockfish</span></label>
           <label><input type="radio" name="engine" value="chrome"><span>Chrome built-in AI</span></label>
@@ -138,6 +146,26 @@
         <label><input type="checkbox" name="react" checked> Move reactions vs computer</label>
         <label><input type="checkbox" name="evalBar"> Evaluation bar vs computer</label>
       </fieldset>
+
+      <details class="pgnbox">
+        <summary>Review your own game (PGN)</summary>
+        <p class="hint">Paste a game from anywhere (Lichess, Chess.com, a scoresheet typed up). It gets the same accuracy check and coach card, and counts towards your skills.</p>
+        <label for="pgnIn" class="hint">PGN</label>
+        <textarea id="pgnIn" rows="4" maxlength="100000" spellcheck="false" placeholder="1. e4 e5 2. Nf3 Nc6 …"></textarea>
+        <fieldset class="seg"><legend>I played</legend>
+          <label><input type="radio" name="pgnSide" value="w" checked><span>White</span></label>
+          <label><input type="radio" name="pgnSide" value="b"><span>Black</span></label>
+        </fieldset>
+        <button type="button" id="pgnReview">Review game</button>
+        <p id="pgnStatus" class="hint" aria-live="polite"></p>
+      </details>
+
+      <details class="skillsbox">
+        <summary>Your skills</summary>
+        <p id="skillsEmpty" class="hint">Finish a game against the computer (6+ moves) or solve puzzles, and your weak spots show up here.</p>
+        <ul id="skills"></ul>
+        <p id="skillsFocus" class="hint"></p>
+      </details>
 
       <details class="trophies">
         <summary>Achievements <span id="trophyCount"></span></summary>

@@ -124,3 +124,17 @@ export async function chromeAIInterpret(text, legalSans) {
   );
   return out.move === 'none' ? null : out.move;
 }
+
+/**
+ * One encouraging sentence for the coach card. Nano only rephrases `facts` ({accuracy, good, worst, focus}) from
+ * the engine and the motif tagger; it is told not to add chess claims of its own. Returns a string.
+ */
+export async function chromeAICoach(facts) {
+  const out = await ask(
+    'You are a friendly chess coach talking to the player after their game. Use ONLY these facts, add no moves or ' +
+      `analysis of your own:\n${JSON.stringify(facts)}\nWrite one short encouraging sentence (max 25 words) with one ` +
+      'concrete thing to try next game. Reply as JSON {"comment": <sentence>}.',
+    { type: 'object', properties: { comment: { type: 'string' } }, required: ['comment'] },
+  );
+  return String(out.comment ?? '').slice(0, 200);
+}

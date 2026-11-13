@@ -16,8 +16,22 @@
   The Grandmaster (full Stockfish). Beat the next one to unlock the one above; your local rating moves with each result,
   and each opponent greets you, gloats over captures and reacts to the result (spoken when "Read moves aloud" is on).
 - **Puzzles**: 1,200 puzzles from the Lichess database bundled offline. **Puzzle Rush** (3 minutes, 3 strikes, gets harder),
-  **Practice** (rated, picks puzzles near your puzzle rating) and **Daily puzzle** (same for everyone that day, with a streak).
+  **Practice** (rated, picks puzzles near your puzzle rating), **Weak spots** (rated practice limited to the puzzle themes
+  of your weakest skill) and **Daily puzzle** (same for everyone that day, with a streak).
   Any checkmate solves a mate puzzle. Hints show the solution but the puzzle then doesn't count for score or rating.
+- **Weakness trainer**: when a game against the computer ends (or a pasted game is reviewed), every mistake and blunder
+  is tagged with a likely cause from the board: a loose piece, an ignored threat, a fork, a pin, king safety,
+  development, an endgame slip or a missed mate. A **coach card** on the result screen shows your worst moment (with
+  **Show** to jump to it), something that went well, and one skill to work on. Chrome AI adds one sentence in its own words
+  when it's available, using only those facts. Live move reactions say why too ("?? Blunder · Your knight on d5 can be
+  taken"). Each skill keeps a 0-100 score (settings → Your skills) that moves with game mistakes and puzzle results,
+  weighted towards recent play. The causes come from simple rules, so treat them as hints, not proof.
+- **Opponent style** (vs Computer → Style): Balanced, Aggressive, Defensive, Tactical or Positional. Stockfish plays at the
+  chosen strength and returns its top 4 candidate moves; the style then picks among those scored within 0.4 pawns of the
+  engine's own choice, so strength barely changes. Ladder opponents each have a fixed style (the Tactician plays tactically).
+- **Review your own game** (settings → Review your own game): paste a PGN from Lichess, Chess.com or a typed-up scoresheet and
+  pick your colour. It loads on the board with the accuracy summary and coach card, and counts towards your skills.
+  Only games from the normal starting position.
 - **Online · 2 extension users**: peer-to-peer WebRTC. Host → send invite code → friend pastes it and sends back a
   reply code → host pastes it → play. Host is White. Only Google's public STUN server is contacted (NAT discovery);
   very strict networks (symmetric NAT) may fail without a TURN relay.
@@ -56,11 +70,11 @@ Ambiguous phrases ask which piece; unrecognised ones go to Chrome AI when it's a
 keyboard · `motion3d.js` + `fx3d.js` move animation, capture dust, confetti · `squares3d.js` · `clock3d.js` 3D chess clock ·
 `themes3d.js` Wood/Marble/Glass/Metal · `camera3d.js` framing · `scene3d.js` + `textures3d.js` table and labels ·
 `room-*.js` + `room-kit.js` + `textures-rooms.js` the four rooms · `board.js` 2D fallback ·
-`parse.js` speech→move · `engines.js` + `engine-stockfish.js` Stockfish (with fallback) · `clock.js` chess clock · `persist.js` saved game · `result.js` game result, material, move sounds · `sfx.js` sound effects · `dialogs.js` promotion + result card · `settings-ui.js` · `voice-ui.js` · `ai.js` + `engine-worker.js` built-in search and Chrome AI · `net.js` + `online.js` P2P · `voice.js` · `ambient.js` · `scenes.css`
+`motifs.js` mistake causes · `skills.js` + `trainer.js` skill profile and Weak spots · `coachcard.js` + `report.js` coach card · `styles.js` opponent styles · `pgn.js` + `pgn-review.js` PGN review · `parse.js` speech→move · `engines.js` + `engine-stockfish.js` Stockfish (with fallback) · `clock.js` chess clock · `persist.js` saved game · `result.js` game result, material, move sounds · `sfx.js` sound effects · `dialogs.js` promotion + result card · `settings-ui.js` · `voice-ui.js` · `ai.js` + `engine-worker.js` built-in search and Chrome AI · `net.js` + `online.js` P2P · `voice.js` · `ambient.js` · `scenes.css`
 
 ## Tests and packaging
 `npm test` (Node 18+): voice parser, built-in engine, the vendored Stockfish build, clock, saved games, ladder,
-move analysis, puzzles and achievements.
+move analysis, puzzles, achievements, mistake causes, the skill profile and coach card, opponent styles and PGN parsing.
 `npm run build` copies the extension files into `dist/`. `npm run zip` runs the tests, builds, and writes
 `checkmate-<manifest version>.zip` for upload to the Chrome Web Store (needs the `zip` command, standard on macOS/Linux).
 
