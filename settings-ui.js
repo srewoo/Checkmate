@@ -2,7 +2,7 @@
 import { chromeAIStatus, warmChromeAI } from './ai.js';
 
 const $ = (id) => document.getElementById(id);
-const RADIOS = ['mode', 'color', 'level', 'engine', 'clock', 'pz', 'scene', 'theme'];
+const RADIOS = ['mode', 'color', 'level', 'style', 'engine', 'clock', 'pz', 'scene', 'theme'];
 const CHECKS = ['tilt', 'speak', 'ambient', 'sfx', 'react', 'evalBar'];
 const LIVE = ['scene', 'theme', 'ambient', 'sfx']; // applied as soon as they change, no new game needed
 
@@ -26,6 +26,7 @@ export function setupSettings(settings, { onOpen, onLive, onStart }) {
     $('puzzleOpts').hidden = form.mode.value !== 'puzzle';
     $('clockOpts').hidden = form.mode.value === 'online' || form.mode.value === 'puzzle';
     $('engineOpts').hidden = form.level.value === 'ladder'; // ladder opponents are always Stockfish
+    $('styleOpts').hidden = form.level.value === 'ladder' || form.engine.value === 'chrome'; // ladder opponents have their own
     $('ladderInfo').hidden = form.level.value !== 'ladder';
   };
 

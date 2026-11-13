@@ -10,9 +10,11 @@ import { update } from './hud.js';
 import { commit, onSquare, hint, newGame, resign, offerDraw, onPeerMessage, runCmd } from './play.js';
 import { renderLadderInfo } from './ladder-ui.js';
 import { renderAchievements } from './achievements-ui.js';
+import { renderSkills } from './trainer.js';
 import './coach.js';
 import './puzzle-mode.js';
 import './replay.js';
+import './pgn-review.js';
 import './emotes.js';
 import { g, $, heard, sideName, canHumanMove, saveSettings } from './state.js';
 
@@ -71,7 +73,7 @@ setPanelMin(settings.panelMin);
 setupVoice({ chess: g.chess, commit, canHumanMove, runCmd, heard });
 
 setupSettings(settings, {
-  onOpen() { renderLadderInfo(); renderAchievements(); },
+  onOpen() { renderLadderInfo(); renderAchievements(); renderSkills(); },
   onLive() { applyLook(); saveSettings(); },
   onStart() {
     if (settings.mode !== 'online') g.online.disconnect();

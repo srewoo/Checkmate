@@ -7,7 +7,7 @@ import { moveSound } from './result.js';
 import { askPromotion, confirmed } from './dialogs.js';
 import { chromeAIStatus, chromeAIMove } from './ai.js';
 import { speak } from './voice.js';
-import { aiLevel } from './ladder-ui.js';
+import { aiLevel, aiStyle } from './ladder-ui.js';
 import { update, resetClockWarnings } from './hud.js';
 import { g, $, heard, sideName, other, sfx, isOver, canHumanMove, emit, on, saveSettings } from './state.js';
 
@@ -53,7 +53,7 @@ async function maybeAI() {
       comment = 'Chrome AI unavailable, Stockfish moved instead.';
     }
   }
-  const [move] = await Promise.all([san ?? engineMove(fen, aiLevel(settings)), new Promise((r) => setTimeout(r, 350))]);
+  const [move] = await Promise.all([san ?? engineMove(fen, aiLevel(settings), aiStyle(settings)), new Promise((r) => setTimeout(r, 350))]);
   if (gid !== g.gameId) return;
   g.thinking = false;
   if (isOver()) return update(); // flagged while thinking
@@ -118,7 +118,7 @@ export async function hint() {
 export function newGame(broadcast = true, saved = null) {
   const { settings, chess } = g;
   g.gameId++;
-  Object.assign(g, { thinking: false, hinting: false, busy: false, review: null, status: null, hintMove: null, ended: null, drawOffer: null });
+  Object.assign(g, { thinking: false, hinting: false, busy: false, review: null, reviewSide: null, status: null, hintMove: null, ended: null, drawOffer: null });
   g.hintsUsed = saved?.hintsUsed ?? 0;
   chess.reset();
   if (saved) try { chess.loadPgn(saved.pgn); } catch { chess.reset(); saved = null; }

@@ -6,7 +6,7 @@ import { playSfx } from './sfx.js';
 
 const KEY = 'checkmate.settings';
 export const DEFAULTS = {
-  mode: 'local', color: 'w', level: 'medium', engine: 'stockfish', clock: '10+0', pz: 'rush', scene: 'indoor', theme: 'wood',
+  mode: 'local', color: 'w', level: 'medium', style: 'balanced', engine: 'stockfish', clock: '10+0', pz: 'rush', scene: 'indoor', theme: 'wood',
   tilt: true, speak: true, ambient: true, sfx: true, react: true, evalBar: false, panelMin: false,
 };
 
@@ -32,6 +32,7 @@ export const g = {
   hinting: false,
   hintMove: null, // a mode's own hint source (puzzles): () => move, null = ask Stockfish
   review: null, // ply being reviewed, null = live position
+  reviewSide: null, // an imported PGN: the colour the player had in it (for the coach card), else null
   status: null, // a mode's own status line (puzzles), null = the default
   opponent: 'Computer', // display name of the computer side
   online: null, // set by game.js

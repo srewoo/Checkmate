@@ -51,3 +51,21 @@ test('numeric levels are a clamped UCI_Elo', () => {
   assert.ok(goCommands(fen, 1600).includes('setoption name UCI_LimitStrength value true'));
   assert.equal(goCommands(fen, 'easy').at(-1), 'go movetime 150');
 });
+
+test('MultiPV returns several candidate lines at a limited strength', { timeout: 30000 }, async () => {
+  const { parseInfo } = await import('../engine-stockfish.js');
+  const fen = 'r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 1 5';
+  const sf = spawn(process.execPath, ['vendor/stockfish/stockfish.js']);
+  const lines = await new Promise((resolve, reject) => {
+    let out = '';
+    sf.stdout.on('data', (d) => {
+      out += d;
+      if (out.includes('uciok') && !sf.started) { sf.started = true; sf.stdin.write(goCommands(fen, 'medium', 300, 4).join('\n') + '\n'); }
+      if (out.includes('bestmove')) { sf.kill(); resolve(out.split('\n').map(parseInfo).filter(Boolean)); }
+    });
+    sf.on('error', reject);
+    sf.stdin.write('uci\n');
+  });
+  const pvs = new Set(lines.map((l) => l.multipv));
+  assert.ok(pvs.size >= 3, `got multipv indices ${[...pvs]}`);
+});

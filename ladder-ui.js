@@ -10,6 +10,8 @@ const current = () => OPPONENTS[ladder.rung];
 
 /** What engines.js should play at for the current settings. */
 export const aiLevel = (settings) => (settings.mode === 'ai' && settings.level === 'ladder' ? current().level : settings.level);
+/** The playing style (styles.js): the ladder opponent's own, else the one chosen in settings. */
+export const aiStyle = (settings) => (settings.mode === 'ai' && settings.level === 'ladder' ? current().style : settings.style);
 
 function say(line) {
   heard(`${current().name}: “${line}”`);

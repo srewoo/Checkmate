@@ -14,8 +14,15 @@ export function daily(date, list = PUZZLES) {
   return toPuzzle(pool[mix % pool.length]);
 }
 
-/** A random pick among the 40 unseen puzzles rated closest to `rating` (so a target past the top gets the hardest). */
-export function near(rating, seen = new Set(), rand = Math.random, list = PUZZLES) {
+/**
+ * A random pick among the 40 unseen puzzles rated closest to `rating` (so a target past the top gets the hardest).
+ * With `themes`, only puzzles carrying one of them, unless fewer than 10 do.
+ */
+export function near(rating, seen = new Set(), rand = Math.random, list = PUZZLES, themes = null) {
+  if (themes?.length) {
+    const themed = list.filter((p) => p[4] && p[4].split(' ').some((t) => themes.includes(t)));
+    if (themed.length >= 10) list = themed;
+  }
   const fresh = list.filter((p) => !seen.has(p[0]));
   const pool = (fresh.length ? fresh : list).slice().sort((a, b) => Math.abs(a[3] - rating) - Math.abs(b[3] - rating)).slice(0, 40);
   return toPuzzle(pool[Math.floor(rand() * pool.length)]);

@@ -1,8 +1,8 @@
 // Review and replay: click a move (or use ←/→, Home/End) to see that position; "Watch replay" on the result card
-// animates the whole game; the result card also gets an accuracy summary per side from Stockfish.
-import { Chess } from './vendor/chess.js';
+// animates the whole game; the result card also gets an accuracy summary per side from Stockfish, and the coach card.
 import { evaluate } from './engines.js';
 import { summarize } from './analysis.js';
+import { renderCoach } from './report.js';
 import { update } from './hud.js';
 import { g, $, on, emit, sideName } from './state.js';
 
@@ -38,24 +38,27 @@ async function replay() {
 }
 $('replayBtn').addEventListener('click', () => { $('result').close(); replay(); });
 
-/** Scores every position (fast, 80 ms each) and writes accuracy + error counts per side onto the result card. */
-async function analyse() {
+/**
+ * Scores every position (fast, 80 ms each) and writes accuracy + error counts per side onto the result card. For
+ * the player's own game (vs the computer, or a reviewed PGN) it adds the coach card and updates the skill profile.
+ */
+export async function analyse() {
   const gid = g.gameId;
-  const sans = g.chess.history();
+  const moves = g.chess.history({ verbose: true });
   const out = $('resultSummary');
-  const c = new Chess();
+  const fens = moves.length ? [moves[0].before, ...moves.map((m) => m.after)] : [];
   const scores = [];
-  for (let i = 0; i <= sans.length; i++) {
+  for (let i = 0; i < fens.length; i++) {
     if (gid !== g.gameId) return; // stop at once if a new game wants the engine
-    if (i % 8 === 0) out.textContent = `Analysing… ${Math.round((100 * i) / (sans.length + 1))}%`;
-    scores.push(await evaluate(c.fen(), 80));
-    if (i < sans.length) c.move(sans[i]);
+    if (i % 8 === 0) out.textContent = `Analysing… ${Math.round((100 * i) / fens.length)}%`;
+    scores.push(await evaluate(fens[i], 80));
   }
   if (gid !== g.gameId) return;
   if (scores.includes(null)) { out.textContent = ''; return; }
-  const side = (color) => summarize(sans.map((_, i) => [scores[i], scores[i + 1]]).filter((_, i) => (i % 2 === 0) === (color === 'w')));
+  const side = (color) => summarize(moves.map((_, i) => [scores[i], scores[i + 1]]).filter((_, i) => (i % 2 === 0) === (color === 'w')));
   const sides = { w: side('w'), b: side('b') };
-  const name = (color) => (g.myColor === null ? sideName(color) : color === g.myColor ? 'You' : g.opponent);
+  const me = g.myColor ?? g.reviewSide;
+  const name = (color) => (me === null ? sideName(color) : color === me ? 'You' : g.reviewSide ? sideName(color) : g.opponent);
   const line = (color) => {
     const { accuracy, counts } = sides[color];
     const errs = [['blunder', counts.blunder], ['mistake', counts.mistake], ['inaccuracy', counts.inaccuracy]]
@@ -64,6 +67,9 @@ async function analyse() {
   };
   out.innerHTML = `<ul>${line('w')}${line('b')}</ul>`; // only numbers, fixed words and names from our own code
   emit('summary', sides);
+  if (me && (g.settings.mode === 'ai' || g.reviewSide)) {
+    renderCoach(moves, scores, me, sides[me].accuracy, (ply) => { $('result').close(); show(ply); });
+  }
 }
 
 on('gameover', () => {

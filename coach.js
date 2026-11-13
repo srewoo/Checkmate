@@ -2,6 +2,7 @@
 // "Blunder") with a toast and a 3D effect; an optional evaluation bar shows who is winning.
 import { evaluate } from './engines.js';
 import { classify, winChance } from './analysis.js';
+import { tagMistake } from './motifs.js';
 import { toast } from './toast.js';
 import { g, $, on, emit, isOver, vsComputer } from './state.js';
 
@@ -42,6 +43,8 @@ on('update', () => {
 on('move', async ({ m, by, before }) => {
   if (!wanted() || by !== 'human') return;
   const gid = g.gameId;
+  const history = g.chess.history({ verbose: true }); // read now: the computer replies before we're done
+  const [ply, prevMove] = [history.length - 1, history.at(-2)];
   const pAfter = scoreOf(m.after); // queued now, ahead of the computer's reply, so the reaction lands first
   const [sBefore, sAfter] = await Promise.all([scoreOf(before), pAfter]);
   if (gid !== g.gameId || sBefore === null || sAfter === null) return;
@@ -49,7 +52,11 @@ on('move', async ({ m, by, before }) => {
   if (!g.settings.react) return;
   const { kind } = classify(sBefore, sAfter, { capture: Boolean(m.captured), check: /[+#]/.test(m.san) });
   if (!kind) return;
-  toast(LABEL[kind], kind);
+  // mistakes and blunders say why (motifs.js), so the toast teaches something
+  const why = kind === 'mistake' || kind === 'blunder'
+    ? tagMistake({ fenBefore: before, fenAfter: m.after, move: m, prevMove, ply, kind, allowedMate: sAfter >= 100000 && sBefore > -100000 }).why
+    : '';
+  toast(why ? `${LABEL[kind]} · ${why}` : LABEL[kind], kind, why ? 4000 : 2200);
   g.board3d?.react(kind, m.to);
   emit('reaction', { kind, m });
 });

@@ -1,8 +1,9 @@
-// Puzzle mode: Practice (rated, endless), Daily (one a day, with a streak) and Puzzle Rush (3 minutes, 3 strikes,
-// getting harder). The opponent's moves are played from the puzzle's solution; the player's are judged.
+// Puzzle mode: Practice (rated, endless), Weak spots (rated practice on your weakest skill, see trainer.js),
+// Daily (one a day, with a streak) and Puzzle Rush (3 minutes, 3 strikes, getting harder). The opponent's moves are played from the puzzle's solution; the player's are judged.
 import { daily, near, judge, fromUci, rushRating } from './puzzles.js';
 import { expected } from './ladder.js';
 import { toast } from './toast.js';
+import { focusSkill } from './trainer.js';
 import { showResult } from './dialogs.js';
 import { commit } from './play.js';
 import { update } from './hud.js';
@@ -34,13 +35,17 @@ function setStatus() {
     const t = `${Math.floor(left / 60000)}:${String(Math.floor(left / 1000) % 60).padStart(2, '0')}`;
     g.status = `Rush ${t} · ${run.score} solved · ${'✗'.repeat(run.strikes)}${'○'.repeat(STRIKES - run.strikes)}`;
   } else if (kind() === 'daily') g.status = `Daily puzzle · ${side} to play${stats.dailyStreak ? ` · streak ${stats.dailyStreak}` : ''}`;
-  else g.status = `Puzzle ${cur.p.rating} · ${side} to play · your rating ${stats.rating}`;
+  else {
+    const focus = kind() === 'focus' ? focusSkill() : null;
+    g.status = `${focus ? `${focus.label} · ` : ''}Puzzle ${cur.p.rating} · ${side} to play · your rating ${stats.rating}`;
+  }
   $('status').textContent = g.status;
 }
 
 function pick() {
   if (kind() === 'daily') return daily(new Date());
-  return near(run ? rushRating(run.score) : stats.rating, seen);
+  const themes = kind() === 'focus' ? focusSkill()?.themes : null; // nothing measured yet: plain practice
+  return near(run ? rushRating(run.score) : stats.rating, seen, Math.random, undefined, themes);
 }
 
 function load() {
@@ -81,7 +86,7 @@ function endRun(why) {
 function rate(won) {
   const p = cur.p;
   const assisted = g.hintsUsed > cur.hints;
-  if (kind() !== 'practice' || (won && assisted)) return '';
+  if (!['practice', 'focus'].includes(kind()) || (won && assisted)) return '';
   const before = stats.rating;
   stats.rating = Math.max(400, Math.round(stats.rating + 32 * ((won ? 1 : 0) - expected(stats.rating, p.rating))));
   return ` · rating ${before} → ${stats.rating}`;
@@ -111,7 +116,7 @@ function solved(m) {
 function wrong(m) {
   toast('✗ Not the move', 'mistake');
   g.board3d?.react('mistake', m.to);
-  if (!cur.failed) { cur.failed = true; const r = rate(false); if (r) heard(`Not quite${r}. Try again.`); saveStats(); }
+  if (!cur.failed) { cur.failed = true; emit('puzzle-failed', { puzzle: cur.p }); const r = rate(false); if (r) heard(`Not quite${r}. Try again.`); saveStats(); }
   g.busy = true;
   later(650, () => {
     g.chess.undo();
